@@ -3,6 +3,12 @@
   "productName": "SeaBathy Desktop",
   "version": "1.0.1",
   "description": "SeaBathy for Windows: survey depths, offline maps, sea conditions, tides, waypoints and route planning",
+  "homepage": "https://github.com/SeaBathy/seabathy-desktop",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SeaBathy/seabathy-desktop.git"
+  },
+  "author": "SeaBathy",
   "main": "src/main.js",
   "license": "MIT",
   "scripts": {

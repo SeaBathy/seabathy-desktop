@@ -11,7 +11,7 @@ Depth surveys, a 3D seabed, tides, sea conditions and route planning, for Window
   <img alt="Not for navigation" src="https://img.shields.io/badge/not%20for-navigation-critical">
 </p>
 
-<p align="center"><img src="screenshots/3d.jpg" width="860" alt="The Whitsundays in 3D, coloured by depth, with the 3D settings panel"></p>
+<p align="center"><img src="screenshots/3d.jpg" width="860" alt="Hardy Reef and Heart Reef on the Great Barrier Reef in 3D, coloured by depth at 10x height, with the 3D settings panel"></p>
 
 SeaBathy Desktop is the [SeaBathy](https://github.com/SeaBathy/seabathy-android) Android
 app for Windows: the same chart, survey colours, 3D view, offline maps, sea conditions,
@@ -187,5 +187,6 @@ Also from SeaBathy: the [Android app](https://github.com/SeaBathy/seabathy-andro
 [BathyPicker](https://github.com/SeaBathy/BathyPicker) and
 [AT5 Chart Maker](https://github.com/SeaBathy/AT5-Chart-Maker).
 
-Screenshots use a 10 m survey of reefs off Townsville and IMAS bathymetry of the
-Whitsundays (CC BY 4.0).
+Screenshots use a 10 m survey of reefs off Townsville, and IMAS bathymetry (CC BY 4.0) of the
+Whitsundays and of Hardy and Heart Reefs made with BathyPicker. IMAS covers the seafloor only,
+so in the Whitsundays shots the island heights come from GMRT (CC BY 4.0).
