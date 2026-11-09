@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; worker-src 'self' blob:; child-src blob:;
+                 style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: seabathy-tiles:;
+                 connect-src 'self' https: blob: data: seabathy-file: seabathy-tiles:; font-src 'self' data: https:">
+  <title>SeaBathy</title>
+  <link rel="stylesheet" href="../dist/maplibre-gl.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="crosshair">✛</div>
+  <div id="crosshair-depth" hidden></div>
+
+  <header id="topbar">
+    <button id="btn-menu" class="top-menu" title="Layers" aria-label="Layers"></button>
+    <button id="coords" title="Go to coordinates"></button>
+    <button id="btn-wpt" class="top-tool" title="Waypoint tool" aria-label="Waypoint tool"></button>
+    <button id="btn-route" class="top-tool" title="Route tool" aria-label="Route tool"></button>
+    <button id="btn-measure" class="top-tool" title="Measure tool" aria-label="Measure tool"></button>
+  </header>
+
+  <div id="map-chips"></div>
+
+  <div id="bottom">
+    <div id="hint" hidden></div>
+    <div id="credits" hidden></div>
+
+    <div id="route-card" class="bottom-card" hidden>
+      <div class="card-row" style="margin-bottom:6px">
+        <span class="card-label">ROUTE</span>
+        <button id="btn-route-undo" class="small-button">UNDO</button>
+        <button id="btn-route-clear" class="small-button muted">CLEAR</button>
+        <button id="btn-route-gpx" class="small-button" title="Export GPX" aria-label="Export GPX"></button>
+      </div>
+      <div id="route-info"></div>
+      <div class="card-buttons">
+        <button id="btn-route-save" class="small-button">SAVE</button>
+        <button id="btn-route-library" class="small-button">ROUTES</button>
+        <button id="btn-route-legs" class="small-button">LEGS</button>
+        <button id="btn-route-reverse" class="small-button">REVERSE</button>
+      </div>
+    </div>
+
+    <div id="measure-card" class="bottom-card" hidden>
+      <div class="card-row">
+        <span id="measure-text"></span>
+        <button id="btn-measure-clear" class="small-button">CLEAR</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="scrim" hidden></div>
+  <aside id="side-panel">
+    <div class="side-header"><span>Layers</span><button id="btn-panel-close" class="side-close" title="Close" aria-label="Close"></button></div>
+    <div class="side-scroll">
+      <button id="btn-settings" class="settings-button"><span>Settings</span></button>
+      <div class="side-section">Map layers</div>
+      <div id="layers-list"></div>
+      <div class="side-section">Waypoints</div>
+      <input id="wpt-search" type="search" placeholder="Search waypoints">
+      <div id="waypoints-list"></div>
+    </div>
+    <div class="side-footer">
+      <div class="side-section">Basemap</div>
+      <select id="basemap">
+        <option value="dark">Dark</option>
+        <option value="osm">OpenStreetMap</option>
+        <option value="custom">Custom</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+  </aside>
+
+  <div id="wpt-sheet-bg" hidden>
+    <div id="wpt-sheet">
+      <div class="sheet-title">New waypoint</div>
+      <input id="wpt-name" class="field" placeholder="Waypoint name" maxlength="80">
+      <div id="wpt-name-error" class="field-error" hidden></div>
+      <textarea id="wpt-desc" class="field" rows="2" placeholder="Description / notes"></textarea>
+      <div id="wpt-colors" class="swatches"></div>
+      <div id="wpt-icons" class="icon-swatches"></div>
+      <button id="wpt-coords" class="coord-row">—</button>
+      <div class="sheet-buttons">
+        <button id="btn-wpt-cancel" class="button">Cancel</button>
+        <button id="btn-wpt-save" class="button primary">Save waypoint</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="terrain" hidden>
+    <div id="terrain-canvas"></div>
+    <div id="terrain-credits" hidden></div>
+    <div id="terrain-bar">
+      <span class="title" id="terrain-title">3D view</span>
+      <span id="terrain-status"></span>
+      <button id="btn-terrain-close" class="pd-close" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div id="terrain-controls" class="floating">
+                <div class="row presets">
+          <button data-cam="45" title="45° oblique (5)">45°</button>
+          <button data-cam="low" title="Low angle">Low</button>
+          <button data-cam="top" title="Top-down (T)">Top</button>
+          <button data-cam="reset" title="Fit whole area (F)">Fit</button>
+        </div>
+        <div class="row presets">
+          <button data-face="0" title="Look north">N</button>
+          <button data-face="90" title="Look east">E</button>
+          <button data-face="180" title="Look south">S</button>
+          <button data-face="270" title="Look west">W</button>
+        </div>
+        <label>Vertical exaggeration <b id="exag-val">3×</b>
+          <input id="exag" type="range" min="0" max="1000" step="1"></label>
+        <div class="row presets">
+          <button id="exag-true" title="True scale: heights match horizontal distances">1:1</button>
+          <button id="exag-auto" title="Scale the relief so it is clearly visible">Auto</button>
+          <button data-exag="10">10×</button>
+          <button data-exag="50">50×</button>
+        </div>
+
+        <h3>Depth range</h3>
+        <div class="row">
+          <label class="inline">From <input id="clip-shallow" type="number" step="0.5"></label>
+          <label class="inline">to <input id="clip-deep" type="number" step="0.5"> m</label>
+        </div>
+        <input id="clip-shallow-slider" type="range" min="0" max="1000" value="0" title="Shallowest depth shown">
+        <input id="clip-deep-slider" type="range" min="0" max="1000" value="1000" title="Deepest depth shown">
+        <label class="check"><input type="checkbox" id="clip-on"> Hide depths outside this range</label>
+        <div class="row">
+          <button id="btn-isolate" class="primary" title="Crop to this depth range and reload it at full detail">Isolate &amp; zoom</button>
+          <button id="btn-show-all">Show all</button>
+        </div>
+        <p class="hint" id="isolate-info"></p>
+
+        <h3>Map on the terrain</h3>
+        <div id="map-list" class="map-list"></div>
+        <div id="custom-form" class="custom-form" hidden>
+          <input id="custom-name" type="text" placeholder="Name, e.g. Google satellite" autocomplete="off">
+          <input id="custom-url" type="text" placeholder="https://…/{z}/{x}/{y}.png" autocomplete="off" spellcheck="false">
+          <p class="hint">A tile link with {z}, {x} and {y}. Only add maps you're allowed to use.</p>
+          <p class="form-error" id="custom-error" hidden></p>
+          <div class="row"><button id="custom-cancel">Cancel</button><button id="custom-add" class="primary">Add map</button></div>
+        </div>
+        <div id="drape-controls" hidden>
+          <div id="drape-status" class="map-status" hidden></div>
+          <label>Map blend <input id="drape-mix" type="range" min="0" max="1" step="0.05" value="1"></label>
+          <label class="check"><input type="checkbox" id="drape-detail" checked> Sharper map as you zoom in</label>
+          <button id="btn-save-offline" class="wide">Save this area offline</button>
+        </div>
+        <label class="check"><input type="checkbox" id="drape-seamarks"> OpenSeaMap seamarks on terrain</label>
+
+        <h3>Contours</h3>
+        <label class="check"><input type="checkbox" id="contour-on" checked> Contour lines</label>
+        <label>Interval <b id="contour-val"></b>
+          <input id="contour" type="range" min="0" max="11" step="1" value="6"></label>
+        <label class="check"><input type="checkbox" id="contour-labels" checked> Depth labels</label>
+
+        <h3>Lighting &amp; display</h3>
+        <label>Sun direction <input id="sun-az" type="range" min="0" max="360" step="5" value="315"></label>
+        <label>Sun height <input id="sun-el" type="range" min="5" max="90" step="1" value="35"></label>
+        <label class="check"><input type="checkbox" id="shadows" checked> Shadows</label>
+        <label class="check"><input type="checkbox" id="sea-surface"> Sea surface</label>
+        <label class="check"><input type="checkbox" id="wpt-3d" checked> Waypoints</label>
+        <label class="check"><input type="checkbox" id="auto-rotate"> Auto-rotate</label>
+        <label>Colour by
+          <select id="color-mode">
+            <option value="depth">Depth</option>
+            <option value="slope">Slope (ledges and drop-offs)</option>
+          </select>
+        </label>
+        <label id="slope-max-wrap" hidden>Red from
+          <select id="slope-max">
+            <option value="5">5° (gentle seabeds)</option>
+            <option value="10">10°</option>
+            <option value="20" selected>20°</option>
+            <option value="35">35°</option>
+            <option value="60">60° (cliffs only)</option>
+          </select>
+        </label>
+        <label>Mesh detail
+          <select id="detail">
+            <option value="512">Fast (512)</option>
+            <option value="1024" selected>Normal (1024)</option>
+            <option value="2048">High (2048)</option>
+          </select>
+        </label>
+        <button id="btn-screenshot">Save screenshot</button>
+        <p class="hint">Left-drag rotate · Right-drag pan · Wheel zoom<br>
+          Double-click to focus on a spot · Shift+click to drop a waypoint<br>
+          Alt+drag to draw a depth profile</p>
+      </div>
+      <div id="profile" class="floating" hidden>
+        <div class="profile-head"><span id="profile-title">Profile</span><button id="profile-close" class="link">✕</button></div>
+        <canvas id="profile-canvas" width="520" height="160"></canvas>
+      </div>
+  </div>
+
+  <div id="drop-hint" hidden>Drop a GeoTIFF, MBTiles or GPX file to load it</div>
+  <div id="loading" hidden>
+    <div class="loading-card">
+      <div class="loading-title" id="loading-title">Loading</div>
+      <div class="loading-text" id="loading-text"></div>
+      <div class="loading-bar"><div></div></div>
+    </div>
+  </div>
+
+  <script src="../dist/renderer.js"></script>
+</body>
+</html>

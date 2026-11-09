@@ -1,0 +1,48 @@
+{
+  "name": "seabathy-desktop",
+  "productName": "SeaBathy Desktop",
+  "version": "1.0.0",
+  "description": "SeaBathy for Windows: survey depths, offline maps, sea conditions, tides, waypoints and route planning",
+  "main": "src/main.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node build.mjs && electron .",
+    "dist": "node build.mjs && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "au.opendepth.seabathy.desktop",
+    "files": [
+      "src/main.js",
+      "src/preload.js",
+      "src/index.html",
+      "src/styles.css",
+      "dist/renderer.js",
+      "dist/maplibre-gl.css"
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "SeaBathy-Desktop-${version}.exe"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "compression": "normal",
+    "npmRebuild": false,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*.node"
+    ]
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8",
+    "esbuild": "0.24.0",
+    "geotiff": "2.1.3",
+    "maplibre-gl": "4.7.1",
+    "proj4": "2.12.1",
+    "three": "0.170.0"
+  }
+}

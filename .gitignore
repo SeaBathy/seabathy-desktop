@@ -1,0 +1,15 @@
+node_modules/
+dist/
+release/
+test/*.tif
+
+# Anywhere in the repository
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+*.exe
+!download/*.exe
+*.apk
+*.mbtiles
