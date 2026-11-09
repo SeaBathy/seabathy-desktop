@@ -2,7 +2,7 @@
 // crosshair readout, tools, side panel, waypoints and layers, wired to the
 // features in their own modules.
 
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { api, prefs, loadPrefs, toast, log, logError, isOnline } from './core.js';
 import { el, dismissAll, showPanel, body, caption } from './ui/panels.js';
 import { icon, svg } from './ui/icons.js';
@@ -565,6 +565,8 @@ async function init() {
   app.showWaypointNames = prefs.getBoolean('show_waypoint_names', false);
   await app.waypoints.load();
 
+  // The map's worker is bundled next to the page (see build.mjs).
+  maplibregl.setWorkerUrl(new URL('../dist/maplibre-gl-worker.cjs', location.href).href);
   const map = new maplibregl.Map({
     container: 'map',
     style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#111418' } }] },

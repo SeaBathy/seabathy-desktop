@@ -9,15 +9,12 @@ Building, testing and the technical details. For using the app, see the [README]
   ```
   npm install --ignore-scripts
   node node_modules/electron/install.js
-  cd node_modules/better-sqlite3
-  npx prebuild-install@7.1.2 --runtime electron --target 33.2.1 --arch x64 --platform win32
-  cd ../..
   npm start
   ```
 
   `--ignore-scripts` skips better-sqlite3's own compile step, which would need a C++
-  toolchain. That also skips Electron's download, so the second line fetches it, and
-  the `prebuild-install` line fetches the ready-made better-sqlite3 built for Electron.
+  toolchain; it isn't needed, because better-sqlite3 ships ready-made builds that work
+  with any Electron. That also skips Electron's download, so the second line fetches it.
 - **Rebuild the exe:** `npm run dist` (on Windows without Developer Mode, set
   `ELECTRON_CACHE` / `ELECTRON_BUILDER_CACHE` to a folder on the same drive as `%TEMP%`).
 

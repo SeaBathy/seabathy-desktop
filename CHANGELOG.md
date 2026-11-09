@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1 — 2026-11-09
+
+Security and maintenance update. Everything works as before.
+
+- **Up-to-date browser engine:** Electron 45 (from 33), with the latest Chromium security fixes.
+- **Map library:** MapLibre GL JS 6.17 (from 4.7), including a security fix.
+- **Build tools:** esbuild 0.28 and electron-builder 26; `npm audit` reports no known vulnerabilities.
+- **Smaller download:** the exe leaves out unused language packs and files for other platforms.
+
 ## 1.0.0 — 2026-11-09
 
 First public release: the SeaBathy Android app for Windows.

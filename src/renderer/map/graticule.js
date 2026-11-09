@@ -2,7 +2,7 @@
 // (map/Graticule.kt). Labels are markers rather than map text: a style with
 // no fonts (a custom tile link) would otherwise leave them blank.
 
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 
 const SOURCE = 'grid-src';
 const LINE_LAYER = 'grid-line';

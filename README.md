@@ -4,7 +4,7 @@
 Depth surveys, a 3D seabed, tides, sea conditions and route planning, for Windows.</p>
 
 <p align="center">
-  <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-0f766e">
+  <img alt="Version 1.0.1" src="https://img.shields.io/badge/version-1.0.1-0f766e">
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?logo=windows&logoColor=white">
   <img alt="Portable, no install" src="https://img.shields.io/badge/install-none%20(portable)-success">
   <img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-blue">
@@ -37,7 +37,7 @@ depth on every leg. One portable exe: no install, no account, no tracking.
 | | |
 |---|---|
 | 🗺️ **Your surveys, sharp** | Open GeoTIFF depth surveys (or drag them onto the window), coloured with the phone's palettes and relief shading, sharp to the file's full resolution. |
-| 🏝️ **3D seabed** | Any depth layer in 3D, with height from 0.5× to 100×, satellite or your offline maps draped over it, contours, profiles and a sharper map as you zoom in. |
+| 🏝️ **3D seabed** | Any depth layer in 3D, with the height exaggerated from 0.5× to 100× so reefs and drop-offs stand out, satellite or your offline maps draped over it, contours, profiles and a sharper map as you zoom in. |
 | 🧭 **Route planning** | Click points on the chart for distance, time, ETA and fuel, with the least survey depth on every leg against your draft. |
 | 🌊 **Free depths anywhere** | Download seabed depths for the area on screen, anywhere in the world (GMRT). |
 | 🌡️ **Tides and sea conditions** | Tide charts, wind, waves, swell, currents, sea temperature and more, saved for offline use, in the units you choose. |
@@ -51,9 +51,22 @@ depth on every leg. One portable exe: no install, no account, no tracking.
 | <img src="screenshots/chart.jpg" width="420"><br>**Your survey on the chart**, with the depth at the crosshair | <img src="screenshots/colours.jpg" width="420"><br>**Depth colours**: palettes, presets and your own range |
 | <img src="screenshots/route.jpg" width="420"><br>**Route planning**: bearing, distance, time and least depth per leg | |
 
+### Vertical exaggeration
+
+Hardy Reef and Heart Reef on the Great Barrier Reef, a 10 m survey made with
+[BathyPicker](https://github.com/SeaBathy/BathyPicker). Exaggerating the height makes
+every reef wall, channel and bommie stand out; the satellite picture is draped over the
+same terrain.
+
+| 10× | 100× |
+|:---:|:---:|
+| <img src="screenshots/3d-depth-10x.jpg" width="420"><br>Depth colours at 10× | <img src="screenshots/3d-depth-100x.jpg" width="420"><br>Depth colours at 100× |
+| <img src="screenshots/3d-satellite-10x.jpg" width="420"><br>Satellite at 10× | <img src="screenshots/3d-satellite-100x.jpg" width="420"><br>Satellite at 100× |
+| <img src="screenshots/3d-reef-closeup.jpg" width="420"><br>**Zoomed into the reef** at 10×: the satellite stays sharp up close | <img src="screenshots/3d-reef-closeup-30x.jpg" width="420"><br>The same view at 30×: the reef wall drops away into the channel |
+
 ## Download and run
 
-1. Download **[`SeaBathy-Desktop-1.0.0.exe`](download/SeaBathy-Desktop-1.0.0.exe)** (or from
+1. Download **[`SeaBathy-Desktop-1.0.1.exe`](download/SeaBathy-Desktop-1.0.1.exe)** (or from
    the Releases page).
 2. Double-click it. There's nothing to install.
 3. The first time, Windows may say *"Windows protected your PC"*, because the exe isn't
@@ -82,7 +95,7 @@ high-detail GeoTIFF of any area.
 Click **3D view** on a depth layer. Drag to rotate, right-drag to pan, scroll to zoom.
 `F` fits, `T` looks from the top, `5` goes back to 45°. In the panel:
 
-- **Vertical exaggeration** from 1:1 to 50× (or Auto) makes reefs and drop-offs stand out.
+- **Vertical exaggeration** from 1:1 up to 100× makes reefs and drop-offs stand out: drag the slider, or use the 1:1, Auto, 10× and 50× buttons.
 - **Map on the terrain**: depth colours, Esri satellite, your offline packs or your own map
   link, with a blend slider. *Save this area offline* downloads the map under the 3D view.
 - **Depth range** with *Isolate & zoom* shows one band at full detail.

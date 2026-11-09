@@ -10,13 +10,13 @@ listed separately in [`DATA_ATTRIBUTION.md`](DATA_ATTRIBUTION.md).
 
 | Component | Version | Licence | Source |
 | --- | --- | --- | --- |
-| Electron (includes Chromium and Node.js) | 33.2.1 | MIT (Chromium's own notices ship in the exe as `LICENSES.chromium.html`) | https://github.com/electron/electron |
-| MapLibre GL JS | 4.7.1 | BSD 3-Clause | https://github.com/maplibre/maplibre-gl-js |
+| Electron (includes Chromium and Node.js) | 45.2.3 | MIT (Chromium's own notices ship in the exe as `LICENSES.chromium.html`) | https://github.com/electron/electron |
+| MapLibre GL JS | 6.17.0 | BSD 3-Clause | https://github.com/maplibre/maplibre-gl-js |
 | three.js | 0.170.0 | MIT | https://github.com/mrdoob/three.js |
 | geotiff.js | 2.1.3 | MIT | https://github.com/geotiffjs/geotiff.js |
 | proj4js | 2.12.1 | MIT | https://github.com/proj4js/proj4js |
-| better-sqlite3 (includes SQLite) | 11.7.0 | MIT (SQLite: public domain) | https://github.com/WiseLibs/better-sqlite3 |
-| esbuild, electron-builder (build tools only) | 0.24.0, 25.1.8 | MIT | https://esbuild.github.io, https://www.electron.build |
+| better-sqlite3 (includes SQLite) | 13.0.3 | MIT (SQLite: public domain) | https://github.com/WiseLibs/better-sqlite3 |
+| esbuild, electron-builder (build tools only) | 0.28.2, 26.18.0 | MIT | https://esbuild.github.io, https://www.electron.build |
 
 The full licence texts of the npm packages are in each package's folder under
 `node_modules/` after `npm install`; `npm ls --all` lists them with

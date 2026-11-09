@@ -2,7 +2,7 @@
 // surveys, MBTiles files and online tile layers, bottom to top, all drawn
 // below the anchor so waypoints and routes stay on top.
 
-import maplibregl from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
 import { api, log, logError, saveList, loadList, uuid } from '../core.js';
 import { OVERLAY_ANCHOR } from './style.js';
 import { Survey } from '../geotiff/survey.js';
