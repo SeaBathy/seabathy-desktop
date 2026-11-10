@@ -503,8 +503,8 @@ function createWindow() {
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (event) => event.preventDefault());
-  win.webContents.on('console-message', (_e, level, message) => {
-    if (level >= 2 && !/ResizeObserver loop/.test(message)) log('Console', message);
+  win.webContents.on('console-message', ({ level, message }) => {
+    if ((level === 'warning' || level === 'error') && !/ResizeObserver loop/.test(message)) log('Console', message);
   });
   win.webContents.on('render-process-gone', (_e, details) => log('App', `renderer gone: ${details.reason}`));
 }

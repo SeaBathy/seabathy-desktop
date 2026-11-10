@@ -28,8 +28,8 @@ const check = (ok, what) => {
 };
 
 app.on('browser-window-created', (_e, win) => {
-  win.webContents.on('console-message', (_ev, level, message) => {
-    if (level >= 3) errors.push(message);
+  win.webContents.on('console-message', ({ level, message }) => {
+    if (level === 'error') errors.push(message);
   });
   win.webContents.once('did-finish-load', () => run(win).catch((e) => {
     console.error(e);
@@ -86,8 +86,19 @@ async function run(win) {
   await wait(4000);
   check(await js(win, `!document.getElementById('terrain').hidden`), '3D view open');
   const maps = await js(win, `[...document.querySelectorAll('#map-list .map-name')].map((e) => e.textContent)`);
-  check(maps[0] === 'Depth colours' && maps[1] === 'Esri satellite' && !maps.includes('OpenStreetMap'), `3D Map list (${maps.join(', ')})`);
+  check(maps[0] === 'Depth colours' && maps[1] === 'Esri satellite' && maps.includes('Sentinel-2 satellite (saves offline)') && !maps.includes('OpenStreetMap'), `3D Map list (${maps.join(', ')})`);
   await shot(win, '3-terrain.png');
+
+  // Esri's terms don't allow offline copies: its map can be viewed but not saved; Sentinel-2 can be saved.
+  const saveShownFor = (name) => js(win, `(async () => {
+    const item = [...document.querySelectorAll('#map-list .map-item')].find((e) => e.querySelector('.map-name')?.textContent === ${JSON.stringify(name)});
+    item?.click();
+    await new Promise((r) => setTimeout(r, 300));
+    return !document.getElementById('btn-save-offline').hidden;
+  })()`);
+  check(!(await saveShownFor('Esri satellite')), 'No "Save this area offline" for Esri satellite');
+  check(await saveShownFor('Sentinel-2 satellite (saves offline)'), '"Save this area offline" offered for Sentinel-2');
+  await saveShownFor('Depth colours');
 
   await js(win, `document.getElementById('btn-terrain-close')?.click()`);
 

@@ -17,13 +17,35 @@ import { formatDdm } from '../util/coords.js';
 
 const $ = (id) => document.getElementById(id);
 const CONTOUR_STEPS = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500];
-// The one online map in the Map list: Esri's World Imagery, shown with the
-// credit Esri's terms ask for. Its id is the one older saves use.
+// The online maps in the Map list: Esri's World Imagery (view only, shown with
+// the credit Esri's terms ask for; its id is the one older saves use) and
+// Sentinel-2 cloudless, whose licence allows saving it offline.
 const ESRI_CREDIT = 'Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community · Powered by Esri';
+const SENTINEL2_CREDIT = 'Sentinel-2 cloudless - https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024)';
 const DEFAULT_DRAPES = [
   { id: 'imagery', label: 'Esri satellite', colour: '#15803d', group: 'default',
-    tiles: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxzoom: 19, attribution: ESRI_CREDIT }
+    tiles: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxzoom: 19, attribution: ESRI_CREDIT },
+  // Sentinel-2 is 10 m imagery: zoom 14 is its full detail.
+  { id: 'sentinel2', label: 'Sentinel-2 satellite (saves offline)', colour: '#0e7490', group: 'default',
+    tiles: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg', maxzoom: 14, attribution: SENTINEL2_CREDIT }
 ];
+// Tile hosts whose terms don't allow bulk or offline copies (see DATA_ATTRIBUTION.md):
+// "Save this area offline" isn't offered for them.
+const VIEW_ONLY_HOSTS = ['arcgisonline.com', 'arcgis.com', 'openstreetmap.org', 'opentopomap.org'];
+
+/** Whether a tile link's provider allows offline copies. */
+export function allowsOfflineCopies(tiles) {
+  let host = '';
+  try {
+    host = new URL(String(tiles).replace(/[{}]/g, '')).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  return !VIEW_ONLY_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+}
+
+/** Whether "Save this area offline" is offered for a Map list entry. */
+const isSavable = (d) => Boolean(d && d.tiles && !d.offline && allowsOfflineCopies(d.tiles));
 const DEPTH_CHOICE = { id: 'depth', label: 'Depth colours', sub: 'The survey coloured by depth, no map', swatch: '◐', colour: '#0e7490', group: 'default' };
 const DRAPE_GROUPS = [['default', 'DEFAULT'], ['layer', 'YOUR LAYERS'], ['custom', 'CUSTOM']];
 const CUSTOM_KEY = 'terrain_custom_drapes';
@@ -351,7 +373,7 @@ export function create(app) {
     }
     const drape = currentDrape();
     $('drape-controls').hidden = !drape;
-    $('btn-save-offline').hidden = !drape || drape.offline;
+    $('btn-save-offline').hidden = !isSavable(drape);
     showCredits();
   }
 
@@ -524,7 +546,7 @@ export function create(app) {
   /** Closes 3D and opens the offline download for the chosen online map over the 3D area. */
   function saveOffline() {
     const drape = currentDrape();
-    if (!drape || drape.offline || !model?.corners) return;
+    if (!isSavable(drape) || !model?.corners) return;
     const lngs = model.corners.map((c) => c[0]);
     const lats = model.corners.map((c) => c[1]);
     const bounds = { west: Math.min(...lngs), south: Math.min(...lats), east: Math.max(...lngs), north: Math.max(...lats) };
