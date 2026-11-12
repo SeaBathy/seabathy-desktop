@@ -38,7 +38,7 @@ const STARTUP_DOWNLOAD_DELAY_MS = 8_000;
 const ONLINE_CHECK_MS = 5_000;
 const CLOSED_MARK = '▾';
 const OPEN_MARK = '▴';
-const ROW_ORDER = ['Wind', 'Current', 'Waves', 'Swell', 'Sea', 'Water'];
+const ROW_ORDER = ['Wind', 'Current', 'Waves', 'Swell', 'Sea', 'Depth', 'Water'];
 /** What "Show on the map" offers (the forecast's own sea temperature is left out: the satellite's is better). */
 const MAP_CHOICES = [
   ColourChoice.WIND, ColourChoice.CURRENT, ColourChoice.WAVES, ColourChoice.SWELL,
@@ -66,7 +66,7 @@ const MAX_WIND_POINTS_PER_SIDE = 10;
 /** Between downloads, so two never land in the same minute of Open-Meteo's limit. */
 const MIN_DOWNLOAD_GAP_MS = 75_000;
 const MAX_ARROWS_PER_SIDE = 12;
-const BOX_ROWS = 6;
+const BOX_ROWS = 7;
 const PLAY_STEP_MS = 650;
 const FORECAST_PICTURE_SIDE = 320;
 const MAX_PICTURE_SIDE = 512;
@@ -177,7 +177,7 @@ export function values(a, lat, lng, time, format) {
   else if (Number.isFinite(modelTemp)) water.push(`Surface ${format.temperature(modelTemp)}`);
   const chl = a.satellites.CHLOROPHYLL?.sample(lat, lng);
   if (Number.isFinite(chl) && a.isSea(lat, lng) !== false) water.push(`chlorophyll ${chl < 1 ? chl.toFixed(2) : chl.toFixed(1)} mg/m³`);
-  if (water.length) out.push({ towardsDegrees: null, text: water.join(' · ') });
+  if (water.length) out.push({ towardsDegrees: null, text: water.join(' · '), row: 'Sea' });
 
   // The coarser layers: one line, as they change slowly.
   if (a.isSea(lat, lng) !== false) {
@@ -187,21 +187,24 @@ export function values(a, lat, lng, time, format) {
       return masked ? s.sampleToShore(lat, lng) : s.sample(lat, lng);
     };
     const below = coarse('TEMP_BELOW');
-    if (Number.isFinite(below)) out.push({ towardsDegrees: null, text: `${format.depth(a.belowDepthM)} down ${format.temperature(below)}` });
+    if (Number.isFinite(below)) out.push({ towardsDegrees: null, text: `${format.depth(a.belowDepthM)} down ${format.temperature(below)}`, row: 'Depth' });
     const surface = [];
     const salinity = coarse('SALINITY');
     if (Number.isFinite(salinity)) surface.push(`Salinity ${salinity.toFixed(1)}`);
     const level = coarse('SEA_LEVEL');
     if (Number.isFinite(level)) surface.push(`sea level ${format.seaLevel(level)}`);
-    if (surface.length) out.push({ towardsDegrees: null, text: surface.join(' · ') });
+    if (surface.length) out.push({ towardsDegrees: null, text: surface.join(' · '), row: 'Water' });
   }
   return out;
 }
 
+/** Which row a values-box line is ('Wind', 'Sea', 'Depth', 'Water'...): its own, or its first word. */
+const rowOf = (value) => value.row || value.text.split(' ')[0];
+
 const rowNameOf = (layer) => ({
   WIND: 'Wind', CURRENT: 'Current', WAVES: 'Waves', SWELL: 'Swell',
   SEA_TEMP_SATELLITE: 'Sea', SEA_TEMP_BREAKS: 'Sea', SEA_TEMP_FORECAST: 'Sea', CHLOROPHYLL: 'Sea',
-  TEMP_BELOW: 'Water', SEA_LEVEL: 'Water', SALINITY: 'Water'
+  TEMP_BELOW: 'Depth', SEA_LEVEL: 'Water', SALINITY: 'Water'
 }[layer.name] || null);
 
 const layerOfRow = (name, a, showing = null) => {
@@ -210,7 +213,8 @@ const layerOfRow = (name, a, showing = null) => {
   return ({
     Wind: ColourChoice.WIND, Current: ColourChoice.CURRENT, Waves: ColourChoice.WAVES, Swell: ColourChoice.SWELL,
     Sea: a.satellites.SEA_TEMP ? ColourChoice.SEA_TEMP_SATELLITE : ColourChoice.SEA_TEMP_FORECAST,
-    Water: a.satellites.TEMP_BELOW ? ColourChoice.TEMP_BELOW : a.satellites.SEA_LEVEL ? ColourChoice.SEA_LEVEL : ColourChoice.SALINITY
+    Depth: ColourChoice.TEMP_BELOW,
+    Water: a.satellites.SEA_LEVEL ? ColourChoice.SEA_LEVEL : ColourChoice.SALINITY
   }[name] || null);
 };
 
@@ -779,10 +783,10 @@ export function create(app) {
     if (shown && a === shownArea) boxWarning.hidden = true;
     else showWarning(boxWarning, a);
     const list = values(a, lat, lng, time, new NavFormat(units()))
-      .filter((v) => !wanted || wanted.has(v.text.split(' ')[0]))
+      .filter((v) => !wanted || wanted.has(rowOf(v)))
       .sort((x, y) => {
-        const i = ROW_ORDER.indexOf(x.text.split(' ')[0]);
-        const j = ROW_ORDER.indexOf(y.text.split(' ')[0]);
+        const i = ROW_ORDER.indexOf(rowOf(x));
+        const j = ROW_ORDER.indexOf(rowOf(y));
         return (i < 0 ? ROW_ORDER.length : i) - (j < 0 ? ROW_ORDER.length : j);
       });
     const bearing = map.getBearing();
@@ -794,7 +798,7 @@ export function create(app) {
       }
       r.view.hidden = false;
       r.text.textContent = value.text;
-      r.layer = layerOfRow(value.text.split(' ')[0], a, colour);
+      r.layer = layerOfRow(rowOf(value), a, colour);
       r.from = a;
       r.highlight(shown && r.layer && (r.layer === colour || (colour === ColourChoice.CHLOROPHYLL && r.layer.satellite)));
       if (value.towardsDegrees === null) {
