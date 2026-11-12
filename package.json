@@ -1,7 +1,7 @@
 {
   "name": "seabathy-desktop",
   "productName": "SeaBathy Desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "SeaBathy for Windows: survey depths, offline maps, sea conditions, tides, waypoints and route planning",
   "homepage": "https://github.com/SeaBathy/seabathy-desktop",
   "repository": {

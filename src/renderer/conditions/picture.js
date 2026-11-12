@@ -13,9 +13,9 @@ export const ColourChoice = {
   SEA_TEMP_SATELLITE: { name: 'SEA_TEMP_SATELLITE', label: 'Sea temperature (satellite)', forecast: false, satellite: SatelliteKind.SEA_TEMP, isTemperature: true },
   SEA_TEMP_BREAKS: { name: 'SEA_TEMP_BREAKS', label: 'Temperature breaks (satellite)', forecast: false, satellite: SatelliteKind.SEA_TEMP },
   SEA_TEMP_FORECAST: { name: 'SEA_TEMP_FORECAST', label: 'Sea temperature (forecast)', forecast: true, isTemperature: true },
-  TEMP_BELOW: { name: 'TEMP_BELOW', label: 'Temperature below the surface (model)', forecast: false, satellite: SatelliteKind.TEMP_BELOW, isTemperature: true },
+  TEMP_BELOW: { name: 'TEMP_BELOW', label: 'Temperature at depth (model)', forecast: false, satellite: SatelliteKind.TEMP_BELOW, isTemperature: true },
   CHLOROPHYLL: { name: 'CHLOROPHYLL', label: 'Chlorophyll (satellite, 5-day blend)', forecast: false, satellite: SatelliteKind.CHLOROPHYLL },
-  SEA_LEVEL: { name: 'SEA_LEVEL', label: 'Sea level, eddies (satellite altimetry)', forecast: false, satellite: SatelliteKind.SEA_LEVEL },
+  SEA_LEVEL: { name: 'SEA_LEVEL', label: 'Sea level and eddies (satellite)', forecast: false, satellite: SatelliteKind.SEA_LEVEL },
   SALINITY: { name: 'SALINITY', label: 'Salinity (satellite)', forecast: false, satellite: SatelliteKind.SALINITY }
 };
 export const COLOUR_CHOICES = Object.values(ColourChoice);

@@ -202,7 +202,7 @@ export const SatelliteKind = {
   /** Height of the sea against its long-term average: eddies stand out. Stored in cm. */
   SEA_LEVEL: { name: 'SEA_LEVEL', label: 'Sea level', unit: 'cm' },
   SALINITY: { name: 'SALINITY', label: 'Salinity', unit: 'PSU' },
-  TEMP_BELOW: { name: 'TEMP_BELOW', label: 'Temperature below the surface', unit: '°C' }
+  TEMP_BELOW: { name: 'TEMP_BELOW', label: 'Temperature at depth', unit: '°C' }
 };
 
 export const DEFAULT_BELOW_DEPTH_M = 50;

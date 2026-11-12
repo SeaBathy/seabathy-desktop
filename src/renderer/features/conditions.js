@@ -173,10 +173,10 @@ export function values(a, lat, lng, time, format) {
   const water = [];
   const satTemp = a.satellites.SEA_TEMP?.sample(lat, lng);
   const modelTemp = f?.sample(F.SEA_TEMP, lat, lng, time, masked);
-  if (Number.isFinite(satTemp)) water.push(`Sea ${format.temperature(satTemp)}`);
-  else if (Number.isFinite(modelTemp)) water.push(`Sea ${format.temperature(modelTemp)}`);
+  if (Number.isFinite(satTemp)) water.push(`Surface ${format.temperature(satTemp)}`);
+  else if (Number.isFinite(modelTemp)) water.push(`Surface ${format.temperature(modelTemp)}`);
   const chl = a.satellites.CHLOROPHYLL?.sample(lat, lng);
-  if (Number.isFinite(chl) && a.isSea(lat, lng) !== false) water.push(`chl ${chl < 1 ? chl.toFixed(2) : chl.toFixed(1)} mg/m³`);
+  if (Number.isFinite(chl) && a.isSea(lat, lng) !== false) water.push(`chlorophyll ${chl < 1 ? chl.toFixed(2) : chl.toFixed(1)} mg/m³`);
   if (water.length) out.push({ towardsDegrees: null, text: water.join(' · ') });
 
   // The coarser layers: one line, as they change slowly.
@@ -186,14 +186,14 @@ export function values(a, lat, lng, time, format) {
       if (!s) return NaN;
       return masked ? s.sampleToShore(lat, lng) : s.sample(lat, lng);
     };
-    const deeper = [];
     const below = coarse('TEMP_BELOW');
-    if (Number.isFinite(below)) deeper.push(`${format.temperature(below)} ${format.depth(a.belowDepthM)} down`);
+    if (Number.isFinite(below)) out.push({ towardsDegrees: null, text: `${format.depth(a.belowDepthM)} down ${format.temperature(below)}` });
+    const surface = [];
     const salinity = coarse('SALINITY');
-    if (Number.isFinite(salinity)) deeper.push(`salinity ${salinity.toFixed(1)}`);
+    if (Number.isFinite(salinity)) surface.push(`Salinity ${salinity.toFixed(1)}`);
     const level = coarse('SEA_LEVEL');
-    if (Number.isFinite(level)) deeper.push(`level ${format.seaLevel(level)}`);
-    if (deeper.length) out.push({ towardsDegrees: null, text: `Water ${deeper.join(' · ')}` });
+    if (Number.isFinite(level)) surface.push(`sea level ${format.seaLevel(level)}`);
+    if (surface.length) out.push({ towardsDegrees: null, text: surface.join(' · ') });
   }
   return out;
 }
@@ -965,7 +965,7 @@ export function create(app) {
 
   function fill(content) {
     content.replaceChildren();
-    content.append(caption('Wind, waves, swell and currents (tidal flow included) for up to 8 days, plus sea temperature and its breaks, chlorophyll, sea level and salinity from satellites, and temperature below the surface. Worldwide, and saved on this computer for use offline.', 8));
+    content.append(caption('Wind, waves, swell and currents (tidal flow included) for up to 8 days, plus sea temperature and its breaks, chlorophyll, sea level and salinity from satellites, and temperature at depth from an ocean model. Worldwide, and saved on this computer for use offline.', 8));
     const summaries = store.cachedSummaries() || [];
     addRow(content, row('Show on the map', shown ? colour.label : 'Off', () => {
       showChoicePanel('Show on the map', ['Off', ...MAP_CHOICES.map((c) => c.label)], shown ? MAP_CHOICES.indexOf(colour) + 1 : 0, (i) => {
@@ -975,7 +975,7 @@ export function create(app) {
         refreshDialog();
       });
     }));
-    content.append(caption('Or click a line in the box on the chart. Each shows its own direction lines; sea temperature and chlorophyll show the current\'s.', 0));
+    content.append(caption('Or click a line in the box on the chart. Each shows its own direction lines; sea temperature and chlorophyll show the current\'s. Temperature breaks are where warm and cold water meet, often where fish gather.', 0));
 
     content.append(sectionHeader('SPOT'));
     addRow(content, row('Spot', spotLabel(), startPicking));
@@ -1021,14 +1021,14 @@ export function create(app) {
       refreshDialog();
     }));
     addRow(content, row('Sea temperature colours', temperatureRangeLabel(), pickTemperatureRange));
-    addRow(content, row('Temperature below the surface', `${new NavFormat(units()).depth(belowDepthM)} down`, () => {
+    addRow(content, row('Temperature at depth', `${new NavFormat(units()).depth(belowDepthM)} down`, () => {
       const format = new NavFormat(units());
       showChoicePanel('How far down', BELOW_DEPTHS.map((d) => format.depth(d)), BELOW_DEPTHS.indexOf(belowDepthM), (i) => {
         if (BELOW_DEPTHS[i] === belowDepthM) return;
         belowDepthM = BELOW_DEPTHS[i];
         prefs.put(KEY_BELOW_DEPTH, belowDepthM);
         refreshDialog();
-        toast('The next update of an area gets this depth');
+        refreshBelowDepth();
       });
     }));
     const opacityLabel = caption(`Colour opacity ${Math.round(opacity * 100)}%`, 4);
@@ -1235,6 +1235,42 @@ export function create(app) {
   }
 
   /** Downloads an area; replacingId updates that saved area (otherwise one with the same bounds is replaced). */
+  /**
+   * After "How far down" changes: downloads only the temperature at the new depth for the area on the map (or
+   * the spot's), so it shows straight away without downloading the whole forecast again.
+   */
+  async function refreshBelowDepth() {
+    const target = area || spotArea;
+    const depthText = new NavFormat(units()).depth(belowDepthM);
+    if (!target || downloading) { toast(`Saved: the next download gets the temperature ${depthText} down`); return; }
+    if (!(await isOnline())) { toast(`No internet: the temperature ${depthText} down comes with the next update`); return; }
+    const depth = belowDepthM;
+    downloading = true;
+    status = `Downloading the temperature ${depthText} down…`;
+    refreshDialog();
+    try {
+      const grid = await client.satellite(SatelliteKind.TEMP_BELOW, target.south, target.west, target.north, target.east, depth);
+      const fresh = new ConditionsArea({
+        id: target.id, name: target.name, south: target.south, west: target.west, north: target.north, east: target.east,
+        fetchedMillis: Date.now(), forecast: target.forecast, satellites: { ...target.satellites, TEMP_BELOW: grid }, belowDepthM: depth
+      });
+      await store.save(fresh);
+      if (spotArea?.id === fresh.id) spotArea = fresh;
+      if (area?.id === fresh.id) { area = fresh; lastPicture = null; scaleCache = null; }
+      status = null;
+      downloading = false;
+      if (shown) redraw(); else updateBox();
+      toast(`Temperature ${depthText} down updated for ${fresh.name}`);
+    } catch (error) {
+      logError(TAG, 'temperature at depth download FAILED', error);
+      toast(`Couldn't get the temperature ${depthText} down: ${message(error)}`);
+    } finally {
+      status = null;
+      downloading = false;
+      refreshDialog();
+    }
+  }
+
   async function download(south, west, north, east, { replacingId = null, note = null, quiet = false } = {}) {
     if (downloading) return;
     const now = Date.now();

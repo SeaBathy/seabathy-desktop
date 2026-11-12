@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.2 — 2026-11-12
+
+Small improvements to sea conditions.
+
+- **Temperature at depth updates straight away:** choosing a new "How far down" downloads just that layer
+  for the area on the chart, instead of waiting for the next full update.
+- **Clearer values box:** surface temperature and chlorophyll, then the temperature at your chosen depth,
+  then salinity and sea level, each on its own line.
+- **Clearer names:** "Temperature at depth (model)", and a one-line explanation of temperature breaks.
+
 ## 1.0.1 — 2026-11-09
 
 Security and maintenance update. Everything works as before.
