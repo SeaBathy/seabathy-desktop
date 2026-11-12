@@ -13,6 +13,7 @@ listed separately in [`DATA_ATTRIBUTION.md`](DATA_ATTRIBUTION.md).
 | Electron (includes Chromium and Node.js) | 45.2.3 | MIT (Chromium's own notices ship in the exe as `LICENSES.chromium.html`) | https://github.com/electron/electron |
 | MapLibre GL JS | 6.17.0 | BSD 3-Clause | https://github.com/maplibre/maplibre-gl-js |
 | three.js | 0.170.0 | MIT | https://github.com/mrdoob/three.js |
+| MapLibre's own dependencies: earcut, kdbush, potpack, quickselect, tinyqueue, pbf, gl-matrix, bidi-js, murmurhash-js, @mapbox/point-geometry, unitbezier, vector-tile and tiny-sdf, @maplibre/maplibre-gl-style-spec, geojson-vt, vt-pbf and mlt | (as installed) | ISC, BSD 2- and 3-Clause, MIT (mlt: MIT or Apache-2.0) | via https://github.com/maplibre/maplibre-gl-js |
 | geotiff.js | 2.1.3 | MIT | https://github.com/geotiffjs/geotiff.js |
 | proj4js | 2.12.1 | MIT | https://github.com/proj4js/proj4js |
 | better-sqlite3 (includes SQLite) | 13.0.3 | MIT (SQLite: public domain) | https://github.com/WiseLibs/better-sqlite3 |
