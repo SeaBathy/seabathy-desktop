@@ -4,7 +4,7 @@
 Depth surveys, a 3D seabed, tides, sea conditions and route planning, for Windows.</p>
 
 <p align="center">
-  <img alt="Version 1.0.2" src="https://img.shields.io/badge/version-1.0.2-0f766e">
+  <img alt="Version 1.0.3" src="https://img.shields.io/badge/version-1.0.3-0f766e">
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?logo=windows&logoColor=white">
   <img alt="Portable, no install" src="https://img.shields.io/badge/install-none%20(portable)-success">
   <img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-blue">
@@ -68,7 +68,7 @@ same terrain.
 
 ## Download and run
 
-1. Download **[`SeaBathy-Desktop-1.0.2.exe`](download/SeaBathy-Desktop-1.0.2.exe)** (or from
+1. Download **[`SeaBathy-Desktop-1.0.3.exe`](download/SeaBathy-Desktop-1.0.3.exe)** (or from
    the Releases page).
 2. Double-click it. There's nothing to install.
 3. The first time, Windows may say *"Windows protected your PC"*, because the exe isn't
@@ -98,7 +98,7 @@ Click **3D view** on a depth layer. Drag to rotate, right-drag to pan, scroll to
 `F` fits, `T` looks from the top, `5` goes back to 45°. In the panel:
 
 - **Vertical exaggeration** from 1:1 up to 100× makes reefs and drop-offs stand out: drag the slider, or use the 1:1, Auto, 10× and 50× buttons.
-- **Map on the terrain**: depth colours, Esri satellite, your offline packs or your own map
+- **Map on the terrain**: depth colours, Sentinel-2 satellite, your offline packs or your own map
   link, with a blend slider. *Save this area offline* downloads the map under the 3D view.
 - **Depth range** with *Isolate & zoom* shows one band at full detail.
 - **Contours**, **sun and shadows**, and **profiles** (Alt+drag).
@@ -156,7 +156,7 @@ to show that layer. Units are in the route and boat settings.
 
 - Camera presets, compass directions, exaggeration 0.5–100×
 - Depth range with Isolate & zoom at full resolution, contour lines and labels
-- Esri satellite, offline MBTiles and your own map links on the terrain, with a blend slider
+- Sentinel-2 satellite, offline MBTiles and your own map links on the terrain, with a blend slider
 - Sharper map as you zoom in; save the 3D area's map offline
 - Sun and shadows, sea surface, depth profiles
 </details>

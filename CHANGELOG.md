@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3 — 2026-11-13
+
+- **Sentinel-2 is the built-in satellite map** in the 3D view. Esri's maps need an ArcGIS licence
+  for use in apps, so they're no longer built in. **Add a map link** still adds Esri's (or any
+  other tile map) under your own terms with that provider, shown with "Powered by Esri". If you
+  had Esri satellite chosen, the 3D view now uses Sentinel-2.
+- **Licences:** the libraries that come with the map engine are now listed, with their full
+  licence texts, under Settings → Licences and credits.
+
 ## 1.0.2 — 2026-11-12
 
 Small improvements to sea conditions.

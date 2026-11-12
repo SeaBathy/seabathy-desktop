@@ -86,17 +86,17 @@ async function run(win) {
   await wait(4000);
   check(await js(win, `!document.getElementById('terrain').hidden`), '3D view open');
   const maps = await js(win, `[...document.querySelectorAll('#map-list .map-name')].map((e) => e.textContent)`);
-  check(maps[0] === 'Depth colours' && maps[1] === 'Esri satellite' && maps.includes('Sentinel-2 satellite (saves offline)') && !maps.includes('OpenStreetMap'), `3D Map list (${maps.join(', ')})`);
+  check(maps[0] === 'Depth colours' && maps[1] === 'Sentinel-2 satellite (saves offline)' && !maps.some((m) => /esri/i.test(m)) && !maps.includes('OpenStreetMap'), `3D Map list (${maps.join(', ')})`);
   await shot(win, '3-terrain.png');
 
-  // Esri's terms don't allow offline copies: its map can be viewed but not saved; Sentinel-2 can be saved.
+  // Sentinel-2's licence allows offline copies, so its map can be saved. (Esri isn't built in: its terms need an
+  // ArcGIS licence; links people add themselves to arcgis hosts are view-only.)
   const saveShownFor = (name) => js(win, `(async () => {
     const item = [...document.querySelectorAll('#map-list .map-item')].find((e) => e.querySelector('.map-name')?.textContent === ${JSON.stringify(name)});
     item?.click();
     await new Promise((r) => setTimeout(r, 300));
     return !document.getElementById('btn-save-offline').hidden;
   })()`);
-  check(!(await saveShownFor('Esri satellite')), 'No "Save this area offline" for Esri satellite');
   check(await saveShownFor('Sentinel-2 satellite (saves offline)'), '"Save this area offline" offered for Sentinel-2');
   await saveShownFor('Depth colours');
 

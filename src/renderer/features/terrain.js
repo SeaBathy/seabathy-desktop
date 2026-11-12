@@ -17,14 +17,11 @@ import { formatDdm } from '../util/coords.js';
 
 const $ = (id) => document.getElementById(id);
 const CONTOUR_STEPS = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500];
-// The online maps in the Map list: Esri's World Imagery (view only, shown with
-// the credit Esri's terms ask for; its id is the one older saves use) and
-// Sentinel-2 cloudless, whose licence allows saving it offline.
-const ESRI_CREDIT = 'Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community · Powered by Esri';
+// The built-in online map in the Map list: Sentinel-2 cloudless, whose licence allows
+// use in the app and saving it offline. Other maps (Esri's included, under your own
+// terms with them) go in with "Add a map link".
 const SENTINEL2_CREDIT = 'Sentinel-2 cloudless - https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024)';
 const DEFAULT_DRAPES = [
-  { id: 'imagery', label: 'Esri satellite', colour: '#15803d', group: 'default',
-    tiles: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxzoom: 19, attribution: ESRI_CREDIT },
   // Sentinel-2 is 10 m imagery: zoom 14 is its full detail.
   { id: 'sentinel2', label: 'Sentinel-2 satellite (saves offline)', colour: '#0e7490', group: 'default',
     tiles: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg', maxzoom: 14, attribution: SENTINEL2_CREDIT }
@@ -357,6 +354,7 @@ export function create(app) {
   /** The Map list, grouped like the layer panel; a saved map that has since gone falls back to depth colours. */
   function fillSurfaceChoices() {
     const choices = drapeChoices();
+    if (s.surface === 'imagery') s.surface = 'sentinel2';   // the satellite map older versions saved
     if (!choices.some((c) => c.id === s.surface)) s.surface = 'depth';
     const box = $('map-list');
     box.replaceChildren();
