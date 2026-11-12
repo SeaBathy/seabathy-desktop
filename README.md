@@ -22,6 +22,8 @@ depth on every leg. One portable exe: no install, no account, no tracking.
 > **Not for navigation.** SeaBathy does not include official nautical charts. Use it
 > alongside proper charts and navigation equipment, never instead of them.
 
+**New here?** The [how-to guide](https://seabathy.com/guide) shows the whole path in a few minutes: get a free depth file with BathyPicker, open it on your phone or PC, and put it on your chartplotter with AT5 Chart Maker.
+
 ## Contents
 
 - [Highlights](#highlights)
@@ -111,6 +113,15 @@ margin. Save, reverse, rename, and export as GPX. `Backspace` takes back the las
 </details>
 
 <details>
+<summary><b>Waypoints and GPX</b></summary>
+
+Click the **Waypoint tool**, then click the chart where the mark goes, and give it a name, icon,
+colour and notes. **☰ → Settings → Import GPX** reads waypoints and routes from a chartplotter,
+the phone app or another program; **Export waypoints and route** saves yours as GPX for the phone
+or plotter.
+</details>
+
+<details>
 <summary><b>Save maps for offline use</b></summary>
 
 Move the map to the area and use **Offline maps → Download the area on screen**. Files go to
@@ -123,8 +134,10 @@ source is Sentinel-2 cloudless satellite imagery.
 
 Click the **Tides** chip to search a place and see the chart for the next day and a half,
 then save months ahead. Click **Sea conditions** to download a spot or area and show wind,
-current, waves, swell, sea temperature, chlorophyll, sea level or salinity, with flow lines
-and a time slider. Units are in the route and boat settings.
+current, waves, swell, sea temperature, temperature breaks, chlorophyll, sea level, salinity or
+the temperature at a depth you choose, with flow lines and a time slider. The values box shows
+surface readings, the temperature at your chosen depth, then salinity and sea level; click a line
+to show that layer. Units are in the route and boat settings.
 </details>
 
 ## All features
@@ -157,7 +170,7 @@ and a time slider. Units are in the route and boat settings.
 - GPX import and export of waypoints and routes
 - Free seabed depths anywhere (GMRT); NASA's daily true colour picture; a latitude and longitude grid
 - Tides with highs, lows, night and heights above LAT, saved offline
-- Sea conditions worldwide, saved offline, with flow lines, a time slider and values at the crosshair
+- Sea conditions worldwide, saved offline, with flow lines, a time slider and values at the crosshair; temperature at a depth you choose (10 to 300 m)
 </details>
 
 The parts of the phone app that need the boat's GPS (follow me, tracks, navigating a route,
