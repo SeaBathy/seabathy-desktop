@@ -1,7 +1,7 @@
 <h1 align="center">SeaBathy Desktop</h1>
 
 <p align="center"><b>Plan your trips on the big screen.</b><br>
-Depth surveys, a 3D seabed, tides, sea conditions and route planning, for Windows.</p>
+Your depth maps in 3D, tides, sea conditions and route planning, for Windows. Works anywhere in the world.</p>
 
 <p align="center">
   <img alt="Version 1.0.3" src="https://img.shields.io/badge/version-1.0.3-0f766e">
