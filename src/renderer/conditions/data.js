@@ -205,7 +205,7 @@ export const SatelliteKind = {
   TEMP_BELOW: { name: 'TEMP_BELOW', label: 'Temperature at depth', unit: '°C' }
 };
 
-export const DEFAULT_BELOW_DEPTH_M = 50;
+export const DEFAULT_BELOW_DEPTH_M = 10;
 /** Sea conditions stop here: the forecast models don't go nearer the poles. */
 export const MAX_LAT = 80;
 export const MAX_LNG = 180;

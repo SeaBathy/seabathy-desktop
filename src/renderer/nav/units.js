@@ -58,20 +58,17 @@ export function setSystemCountry(code) {
   systemCountry = code || '';
 }
 
-const IMPERIAL_COUNTRIES = ['US', 'BS', 'BZ', 'KY', 'PW', 'FM', 'MH', 'LR'];
-
-/** Feet for anyone already using feet or fathoms for depth, or where people use them. */
-export function defaultHeightUnit(depth, code = systemCountry) {
-  return depth !== DepthUnit.METRES || IMPERIAL_COUNTRIES.includes(code.toUpperCase()) ? HeightUnit.FEET : HeightUnit.METRES;
+/** Metres, unless depths are already shown in feet or fathoms. */
+export function defaultHeightUnit(depth) {
+  return depth !== DepthUnit.METRES ? HeightUnit.FEET : HeightUnit.METRES;
 }
 
 /** Until one is chosen, wind and current stay in the boat's speed unit. */
 const seaSpeedLike = (speed) => SeaSpeedUnit[speed.name];
 
-/** Fahrenheit where people use it, Celsius everywhere else. */
-export function defaultTemperatureUnit(code = systemCountry) {
-  const country = code.toUpperCase();
-  return IMPERIAL_COUNTRIES.includes(country) ? TemperatureUnit.FAHRENHEIT : TemperatureUnit.CELSIUS;
+/** Celsius until the user picks otherwise, wherever the PC is set to. */
+export function defaultTemperatureUnit() {
+  return TemperatureUnit.CELSIUS;
 }
 export const PlanSpeedSource = { CRUISE: 'CRUISE', GPS: 'GPS' };
 

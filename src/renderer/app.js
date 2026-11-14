@@ -16,6 +16,7 @@ import { formatDdm } from './util/coords.js';
 import { rasterQuality } from './settings/presets.js';
 import { features } from './features.js';
 import { Graticule } from './map/graticule.js';
+import { NavMarks, confirmNotForNavigation, NAV_MARKS_CREDIT } from './map/navMarks.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -144,6 +145,7 @@ function showLayer(layer) {
 
 function installAppLayers() {
   const map = app.map;
+  app.navMarks.install();
   app.graticule.install();
   map.addSource('measure', { type: 'geojson', data: EMPTY });
   map.addLayer({ id: 'measure-casing', type: 'line', source: 'measure', filter: ['==', '$type', 'LineString'], paint: { 'line-color': CASING, 'line-width': 6 } });
@@ -246,6 +248,7 @@ function handleMapClick(lat, lng) {
       refreshMeasure();
       break;
     default:
+      if (app.navMarks?.click(lat, lng)) break;
       features.onMapClick?.(lat, lng);
   }
 }
@@ -546,6 +549,17 @@ function openSettings() {
       prefs.put('show_grid', on);
       app.graticule.setVisible(on);
     },
+    showNavMarks: () => app.navMarks.visible,
+    onShowNavMarksChanged: (on, done) => {
+      const apply = (value) => {
+        app.navMarks.setVisible(value);
+        app.style.refreshAttribution();
+        done(value);
+      };
+      // The warning is shown, and must be ticked, every time the layer is turned on.
+      if (!on) apply(false);
+      else confirmNotForNavigation(apply);
+    },
     onGetSeabed: () => features.seabed?.show(),
     onExportGpx: () => features.gpx?.exportAll(),
     onExportLog: async () => {
@@ -579,6 +593,8 @@ async function init() {
   map.addControl(new maplibregl.NavigationControl({ showZoom: false, visualizePitch: true }), 'top-right');
   app.graticule = new Graticule(map);
   app.graticule.visible = prefs.getBoolean('show_grid', false);
+  app.navMarks = new NavMarks(map);
+  // Always starts off: turning it on asks for the not-for-navigation tick again.
 
   app.overlays = new OverlayLayers(map, {
     onStackChanged: () => {
@@ -603,7 +619,7 @@ async function init() {
       $('credits').hidden = !text;
     },
     overlayCredits: () => app.overlays.visibleAttributions(),
-    extraCredits: () => features.credits()
+    extraCredits: () => [...features.credits(), ...(app.navMarks?.visible ? [NAV_MARKS_CREDIT] : [])]
   });
   app.layerPanel = new LayerPanel($('layers-list'), app.overlays, {
     onEditDepthColours: (layer) => features.depthColours?.show(layer),

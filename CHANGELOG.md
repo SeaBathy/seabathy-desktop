@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Buoys, beacons, pipelines (beta):** a new map layer in Settings → Map display, off by default.
+  It shows channel markers, cardinals, special marks, lights, moorings, offshore pipelines,
+  submarine cables and mooring areas from free government data and OpenStreetMap, with chart-style
+  icons; click a mark for its type and source. It is not for navigation: every time it is turned on,
+  the app shows a warning that must be ticked first, and it starts off each time the app opens.
+- **Metric by default:** sea temperature in °C and tides and waves in metres until you choose
+  otherwise, wherever the PC is set to. Temperature at depth now starts at 10 m instead of 50 m.
+
 ## 1.0.3 — 2026-11-13
 
 - **Sentinel-2 is the built-in satellite map** in the 3D view, instead of Esri's. Esri World

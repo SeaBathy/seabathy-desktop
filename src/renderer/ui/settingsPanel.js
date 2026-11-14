@@ -66,6 +66,8 @@ export function showSettings(c) {
 
   const grid = addRow(content, row('Latitude and longitude grid', '', choice('Latitude and longitude grid', ['Off', 'On'],
     () => (c.showGrid() ? 1 : 0), (i) => c.onShowGridChanged(i === 1))));
+  const navMarks = addRow(content, row('Buoys, beacons, pipelines (beta)', '', choice('Buoys, beacons, pipelines (beta)', ['Off', 'On'],
+    () => (c.showNavMarks() ? 1 : 0), (i) => c.onShowNavMarksChanged(i === 1, () => refresh()))));
 
   content.append(sectionHeader('MAP LAYERS'));
   addRow(content, row('Get seabed depths for this area', 'Free depth data, anywhere in the world', () => { closeSettings(); c.onGetSeabed(); }));
@@ -117,6 +119,7 @@ export function showSettings(c) {
     setRowText(xyz, 'Online map layers', onlineLayersDetail());
     setRowText(names, 'Show waypoint names on map', c.showWaypointNames() ? 'On' : 'Off');
     setRowText(grid, 'Latitude and longitude grid', c.showGrid() ? 'On' : 'Off');
+    setRowText(navMarks, 'Buoys, beacons, pipelines (beta)', c.showNavMarks() ? 'On' : 'Off');
   }
   refresh();
   settingsHandle = showPanel('Settings', content, { onDismiss: () => { settingsHandle = null; } });

@@ -10,7 +10,7 @@ await build({
   platform: 'browser',
   target: 'chrome128',
   outfile: 'dist/renderer.js',
-  loader: { '.txt': 'text' },
+  loader: { '.txt': 'text', '.geojson': 'json' },
   sourcemap: true,
   logLevel: 'warning'
 });
