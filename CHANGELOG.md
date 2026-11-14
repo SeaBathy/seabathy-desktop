@@ -9,6 +9,9 @@
   the app shows a warning that must be ticked first, and it starts off each time the app opens.
 - **Metric by default:** sea temperature in °C and tides and waves in metres until you choose
   otherwise, wherever the PC is set to. Temperature at depth now starts at 10 m instead of 50 m.
+- **Esri maps are no longer ready-made links,** to match the phone app: Esri's terms expect an
+  ArcGIS account for app use. You can still add them yourself under Online map layers → Your own tile link, under your own
+  terms with Esri. Maps you already added stay.
 
 ## 1.0.3 — 2026-11-13
 
