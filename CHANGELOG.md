@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Backup and restore** (Settings → Backup and restore): one file with your waypoints, routes,
+  tracks and settings, in the same format as the phone app. A daily backup can go to any folder
+  (a OneDrive or Google Drive folder works), keeping the newest five. A phone backup restored here
+  adds its waypoints and routes.
+- **Import KML and KMZ** (Google Earth) as well as GPX, from Settings or by dropping the file on the
+  map: points become waypoints, lines routes.
+
 ## 1.1.1 — 2026-11-16
 
 - **Temperature lines:** smooth, labelled lines over the sea temperature maps (satellite, breaks
