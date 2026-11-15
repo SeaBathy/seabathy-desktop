@@ -36,6 +36,9 @@ const KEY_BAND = 'conditions_target_band';
 const KEY_EDDIES = 'conditions_eddies';
 const CONTOUR_SOURCE = 'conditions-contours-src';
 const CONTOUR_LINE_LAYER = 'conditions-contours';
+const CONTOUR_CASING_LAYER = 'conditions-contours-casing';
+/** Temperature rings smaller than this share of the area are noise, not features. */
+const MIN_LINE_SHARE = 0.03;
 const CONTOUR_DASH_LAYER = 'conditions-contours-cold';
 const CONTOUR_LABEL_LAYER = 'conditions-contour-labels';
 const EDDY_LABEL_LAYER = 'conditions-eddy-labels';
@@ -640,7 +643,7 @@ export function create(app) {
       map.addLayer({
         id: IMAGE_LAYER, type: 'raster', source: IMAGE_SOURCE,
         paint: { 'raster-opacity': opacity, 'raster-resampling': 'linear', 'raster-fade-duration': 0 }
-      }, map.getLayer(CONTOUR_LINE_LAYER) ? CONTOUR_LINE_LAYER : map.getLayer(ARROW_LAYER) ? ARROW_LAYER : nextAfterAnchor());
+      }, [CONTOUR_CASING_LAYER, CONTOUR_LINE_LAYER, ARROW_LAYER].find((id) => map.getLayer(id)) || nextAfterAnchor());
     }
     lastPicture = picture;
   }
@@ -1250,24 +1253,35 @@ export function create(app) {
           const high = unit.of(r[1]);
           const step = contourStep < 0 ? Contours.autoStep(high - low) : contourStep;
           const lv = Contours.levels(low, high, step);
-          for (const line of Contours.lines(tempGrid.grid, smooth, lv.map((x) => unit.toCelsius(x)), 6)) {
-            list.push({ line, kind: 'temp', label: `${stepText(unit.of(line.level))}°` });
+          for (const line of Contours.lines(tempGrid.grid, smooth, lv.map((x) => unit.toCelsius(x)), 6, 2, MIN_LINE_SHARE)) {
+            const inUnit = unit.of(line.level);
+            const major = Contours.isMajor(inUnit, step, lv.length);
+            list.push({ line, kind: major ? 'temp' : 'minor', label: `${stepText(inUnit)}°` });
           }
         }
       }
       if (targetBand) {
         // From the unsmoothed values, so the edges sit exactly where the bright water ends.
-        for (const line of Contours.lines(tempGrid.grid, tempGrid.values, targetBand, 4)) {
+        for (const line of Contours.lines(tempGrid.grid, tempGrid.values, targetBand, 4, 1, MIN_LINE_SHARE)) {
           list.push({ line, kind: 'band', label: `${unit.of(line.level).toFixed(1)}${unit.label}` });
         }
       }
     }
     const level = a.satellites.SEA_LEVEL;
     if (level && (eddyMode === EddyMode.ALWAYS || (eddyMode === EddyMode.WITH_SEA_LEVEL && choice === ColourChoice.SEA_LEVEL))) {
-      for (const line of Contours.lines(level.grid, level.values, EDDY_LEVELS_CM, 4)) {
-        list.push({ line, kind: line.level > 0 ? 'warm' : 'cold', label: `${line.level > 0 ? '+' : ''}${line.level}` });
+      // On the sea level map in red and blue; over other maps white, the way IMOS OceanCurrent draws them.
+      const light = choice !== ColourChoice.SEA_LEVEL ? '_light' : '';
+      // Kept inside the area: the coarse sea level grid reaches a little past it.
+      const g = level.grid;
+      const inside = Float32Array.from(level.values, (v, i) => {
+        const lat = g.lats[Math.floor(i / g.cols)];
+        const lng = g.lngs[i % g.cols];
+        return lat < a.south || lat > a.north || lng < a.west || lng > a.east ? NaN : v;
+      });
+      for (const line of Contours.lines(g, inside, EDDY_LEVELS_CM, 4, 2)) {
+        list.push({ line, kind: (line.level > 0 ? 'warm' : 'cold') + light, label: `${line.level > 0 ? '+' : ''}${line.level} cm` });
       }
-      eddies = Contours.eddies(level.grid, level.values);
+      eddies = Contours.eddies(g, inside);
     }
     return list.length || eddies.length ? Contours.contourGeoJson(list, eddies) : EMPTY;
   }
@@ -1275,9 +1289,9 @@ export function create(app) {
   /** A label drawn as an image (this map has no fonts loaded). */
   function labelImage(id) {
     const text = id.slice(LABEL_IMAGE.length);
-    const eddy = text === 'W' || text === 'C';
+    const eddy = /^[WC] /.test(text);
     const ratio = 2;
-    const size = (eddy ? 17 : 10.5) * ratio;
+    const size = (eddy ? 15 : 10.5) * ratio;
     const c = document.createElement('canvas');
     const g = c.getContext('2d');
     const font = `${eddy ? 'bold ' : '600 '}${size}px system-ui, sans-serif`;
@@ -1293,7 +1307,7 @@ export function create(app) {
     g.lineWidth = (eddy ? 4 : 3) * ratio / 1.5;
     g.strokeStyle = eddy ? '#FFFFFF' : '#0B1622';
     g.strokeText(text, w / 2, h / 2);
-    g.fillStyle = text === 'W' ? '#D8281E' : text === 'C' ? '#1E4FD8' : '#FFFFFF';
+    g.fillStyle = !eddy ? '#FFFFFF' : text[0] === 'W' ? '#D8281E' : '#1E4FD8';
     g.fillText(text, w / 2, h / 2);
     map.addImage(id, g.getImageData(0, 0, w, h), { pixelRatio: ratio });
   }
@@ -1311,29 +1325,51 @@ export function create(app) {
       if (!map.getSource(CONTOUR_SOURCE)) map.addSource(CONTOUR_SOURCE, { type: 'geojson', data: EMPTY });
       const before = map.getLayer(ARROW_LAYER) ? ARROW_LAYER : nextAfterAnchor();
       const isLine = ['==', ['geometry-type'], 'LineString'];
+      const isCold = ['in', ['get', 'kind'], ['literal', ['cold', 'cold_light']]];
+      // Wider with zoom, from the width at zoom 5 to twice it at zoom 11.
+      // [cases]: kind, width, ..., default width. Zoom must be the outer expression.
+      const width = (...cases) => {
+        const at = (k) => ['match', ['get', 'kind'], ...cases.map((c, i) => (i % 2 === 1 || i === cases.length - 1 ? c * k : c))];
+        return ['interpolate', ['linear'], ['zoom'], 5, at(1), 11, at(2)];
+      };
+      const lineLayout = { 'line-join': 'round', 'line-cap': 'round' };
+      if (!map.getLayer(CONTOUR_CASING_LAYER)) {
+        // A faint light edge under the dark temperature lines keeps them visible over dark blue water.
+        map.addLayer({
+          id: CONTOUR_CASING_LAYER, type: 'line', source: CONTOUR_SOURCE,
+          filter: ['all', isLine, ['in', ['get', 'kind'], ['literal', ['temp', 'minor']]]],
+          layout: lineLayout,
+          paint: { 'line-color': 'rgba(255,255,255,0.55)', 'line-width': width('temp', 2.6, 1.8) }
+        }, before);
+      }
       if (!map.getLayer(CONTOUR_LINE_LAYER)) {
         map.addLayer({
           id: CONTOUR_LINE_LAYER, type: 'line', source: CONTOUR_SOURCE,
-          filter: ['all', isLine, ['!=', ['get', 'kind'], 'cold']],
-          layout: { 'line-join': 'round' },
+          filter: ['all', isLine, ['!', isCold]],
+          layout: lineLayout,
           paint: {
-            'line-color': ['match', ['get', 'kind'], 'band', '#FFFFFF', 'warm', '#5A0A0A', 'rgba(11,22,34,0.85)'],
-            'line-width': ['match', ['get', 'kind'], 'band', 2.6, 'warm', 1.6, 1]
+            'line-color': ['match', ['get', 'kind'], 'band', '#FFFFFF', 'warm', '#8E1616', 'warm_light', 'rgba(255,255,255,0.9)',
+              'minor', 'rgba(11,22,34,0.8)', 'rgba(11,22,34,0.9)'],
+            'line-width': width('band', 2.4, 'warm', 1.5, 'warm_light', 1.3, 'minor', 0.6, 1.1)
           }
         }, before);
       }
       if (!map.getLayer(CONTOUR_DASH_LAYER)) {
         map.addLayer({
           id: CONTOUR_DASH_LAYER, type: 'line', source: CONTOUR_SOURCE,
-          filter: ['all', isLine, ['==', ['get', 'kind'], 'cold']],
-          paint: { 'line-color': '#0A1E5A', 'line-width': 1.6, 'line-dasharray': [3, 2] }
+          filter: ['all', isLine, isCold],
+          paint: {
+            'line-color': ['match', ['get', 'kind'], 'cold_light', 'rgba(255,255,255,0.9)', '#1B3A8C'],
+            'line-width': width('cold_light', 1.3, 1.5),
+            'line-dasharray': [3, 2]
+          }
         }, before);
       }
       if (!map.getLayer(CONTOUR_LABEL_LAYER)) {
         map.addLayer({
-          id: CONTOUR_LABEL_LAYER, type: 'symbol', source: CONTOUR_SOURCE, filter: isLine,
+          id: CONTOUR_LABEL_LAYER, type: 'symbol', source: CONTOUR_SOURCE, filter: ['all', isLine, ['!=', ['get', 'label'], '']],
           layout: {
-            'symbol-placement': 'line', 'symbol-spacing': 220,
+            'symbol-placement': 'line', 'symbol-spacing': 320,
             'icon-image': ['concat', LABEL_IMAGE, ['get', 'label']],
             'icon-rotation-alignment': 'map', 'icon-keep-upright': true
           }

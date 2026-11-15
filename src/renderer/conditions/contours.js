@@ -57,12 +57,57 @@ export function smooth(grid, values, passes = 1) {
   return src;
 }
 
-/** Lines at each level: [{ level, points: [[lng, lat], ...] }]; shorter than [minPoints] dropped. */
-export function lines(grid, values, levelList, minPoints = 3) {
+/**
+ * Lines at each level: [{ level, points: [[lng, lat], ...] }]; shorter than
+ * [minPoints] dropped. [rounding] passes of corner cutting smooth the grid's kinks.
+ */
+export function lines(grid, values, levelList, minPoints = 3, rounding = 0, minShare = 0) {
   const out = [];
   if (grid.rows < 2 || grid.cols < 2) return out;
-  for (const level of levelList) out.push(...linesAt(grid, values, level, minPoints));
+  // Lines (mostly little rings round noise) spanning less than this share of the area are dropped.
+  const minSpan = minShare * Math.max(grid.lngs[grid.cols - 1] - grid.lngs[0], grid.lats[grid.rows - 1] - grid.lats[0]);
+  for (const level of levelList) {
+    for (const line of linesAt(grid, values, level, minPoints)) {
+      if (minSpan > 0 && span(line.points) < minSpan) continue;
+      out.push(rounding > 0 ? { level, points: rounded(line.points, rounding) } : line);
+    }
+  }
   return out;
+}
+
+/** The larger of a line's width and height, in degrees. */
+function span(points) {
+  let x0 = Infinity; let x1 = -Infinity; let y0 = Infinity; let y1 = -Infinity;
+  for (const [x, y] of points) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  return Math.max(x1 - x0, y1 - y0);
+}
+
+/** Chaikin corner cutting; ends of open lines stay put, closed lines stay closed. */
+export function rounded(points, passes) {
+  let p = points;
+  for (let k = 0; k < passes; k++) {
+    if (p.length < 3) return p;
+    const first = p[0];
+    const last = p[p.length - 1];
+    const closed = first[0] === last[0] && first[1] === last[1];
+    const out = closed ? [] : [first];
+    for (let i = 0; i < p.length - 1; i++) {
+      const [x0, y0] = p[i];
+      const [x1, y1] = p[i + 1];
+      out.push([0.75 * x0 + 0.25 * x1, 0.75 * y0 + 0.25 * y1], [0.25 * x0 + 0.75 * x1, 0.25 * y0 + 0.75 * y1]);
+    }
+    out.push(closed ? out[0] : last);
+    p = out;
+  }
+  return p;
+}
+
+/** Whether [level] gets a thick, labelled line: whole degrees for fine steps, every other line for coarse ones, all when few. */
+export function isMajor(level, step, count) {
+  if (count <= 6) return true;
+  const every = step < 1 ? 1 : step * 2;
+  const k = level / every;
+  return Math.abs(k - Math.round(k)) < 1e-6;
 }
 
 function linesAt(grid, values, level, minPoints) {
@@ -174,7 +219,7 @@ export function contourGeoJson(lineList, eddyList = []) {
   }));
   for (const e of eddyList) {
     features.push({
-      type: 'Feature', properties: { kind: e.warm ? 'warm' : 'cold', label: e.warm ? 'W' : 'C' },
+      type: 'Feature', properties: { kind: e.warm ? 'warm' : 'cold', label: `${e.warm ? 'W' : 'C'} ${e.valueCm > 0 ? '+' : ''}${Math.round(e.valueCm)}` },
       geometry: { type: 'Point', coordinates: [round(e.lng), round(e.lat)] }
     });
   }
