@@ -10,7 +10,7 @@ import {
   NavFormat, loadNavSettings, saveNavSettings, DistanceUnit, SpeedUnit, DepthUnit, FuelUnit, TemperatureUnit, HeightUnit, SeaSpeedUnit,
   usableFuelLitres, fuelSet, litresPerNm, minimumDepthM, METRES_PER_NM
 } from '../nav/units.js';
-import { toGpx, fromGpx } from '../geo.js';
+import { toGpx, fromGpx, fromKml } from '../geo.js';
 import { sampleLonLat } from '../tif.js';
 import { ToolMode, bearingDegrees, scheduleDepthQuery, refreshWaypoints } from '../app.js';
 
@@ -189,7 +189,7 @@ export function create(app) {
     const top = el('div', 'pd-button-row');
     top.append(
       button('Save current route', () => { if (saveCurrent()) handle.dismiss(); }, { primary: true }),
-      button('Import GPX', () => { handle.dismiss(); importFile(); })
+      button('Import GPX, KML or KMZ', () => { handle.dismiss(); importFile(); })
     );
     content.append(top);
     if (!library.length) content.append(caption('No saved routes yet. Plan one on the chart and save it, or import a GPX file.'));
@@ -447,7 +447,8 @@ export function create(app) {
   function importText(name, text) {
     let result;
     try {
-      result = fromGpx(text);
+      // GPX or KML, told apart by what's inside.
+      result = /<kml[\s>]/.test(text.slice(0, 4096)) ? fromKml(text) : fromGpx(text);
     } catch (error) {
       toast(error.message);
       return;
@@ -480,7 +481,7 @@ export function create(app) {
   }
 
   async function importFile() {
-    const file = await api.openText(['gpx']);
+    const file = await api.openText(['gpx', 'kml', 'kmz']);
     if (file) importText(file.name, file.text);
   }
 

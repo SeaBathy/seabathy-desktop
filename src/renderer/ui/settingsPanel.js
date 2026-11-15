@@ -1,9 +1,10 @@
 // The Settings panel, as on the phone (ui/SettingsPanel.kt). The anchor
 // alarm row is left out: it needs the boat's GPS.
 
-import { body, sectionHeader, caption, row, addRow, setRowText, showPanel, showChoicePanel } from './panels.js';
+import { body, sectionHeader, caption, row, addRow, setRowText, showPanel, showChoicePanel, confirm } from './panels.js';
 import { RASTER_QUALITIES } from '../settings/presets.js';
 import licences from '../licenses.txt';
+import { toast } from '../core.js';
 
 export const COLOUR_NAMES = ['Marine teal', 'Green', 'Orange', 'Red', 'Purple', 'White'];
 export const COLOUR_VALUES = ['#19C6B3', '#22C55E', '#F97316', '#EF4444', '#A855F7', '#F4F6F8'];
@@ -96,7 +97,8 @@ export function showSettings(c) {
   addRow(content, row('Sea conditions', 'Currents, waves, wind, sea temperature, offline', () => { closeSettings(); c.onConditions(); }));
 
   content.append(sectionHeader('DATA'));
-  addRow(content, row('Import GPX', 'From a plotter, the phone or another app', c.onImportGpx));
+  addRow(content, row('Backup and restore', 'Waypoints, routes, tracks and settings; daily to a folder', () => { closeSettings(); showBackup(); }));
+  addRow(content, row('Import GPX, KML or KMZ', 'From a plotter, Google Earth, the phone or another app', c.onImportGpx));
   addRow(content, row('Export waypoints and route', 'Save as a GPX file', c.onExportGpx));
   content.append(caption('If something goes wrong, save this log so it can be fixed.', 0));
   addRow(content, row('Export debug log', 'What the app did, and any errors', c.onExportLog));
@@ -124,4 +126,62 @@ export function showSettings(c) {
   refresh();
   settingsHandle = showPanel('Settings', content, { onDismiss: () => { settingsHandle = null; } });
   return { refresh };
+}
+
+/** Settings → Backup and restore. */
+async function showBackup() {
+  const api = window.seabathy;
+  const content = body();
+  content.append(caption('A backup holds your waypoints, routes, tracks and settings. Map files and downloads (surveys, chart packs, tides, sea conditions) aren’t included. A phone backup restored here adds its waypoints and routes.', 0));
+  let handle = null;
+  addRow(content, row('Back up now', 'Save a backup file where you choose', async () => {
+    // Lets any change of the last moment reach the disk first.
+    await new Promise((r) => setTimeout(r, 400));
+    try {
+      const name = await api.backupSave();
+      if (name) toast(`Backup saved: ${name}`);
+    } catch (error) {
+      toast(`Couldn't save the backup: ${error.message}`);
+    }
+  }));
+  addRow(content, row('Restore a backup', 'From a SeaBathy backup file (Desktop or phone)', async () => {
+    let s;
+    try {
+      s = await api.backupOpen();
+    } catch (error) {
+      toast(error.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+      return;
+    }
+    if (!s) return;
+    const when = new Date(s.created).toLocaleDateString();
+    const phone = s.app === 'android';
+    const message = phone
+      ? `A phone backup from ${when}: ${s.waypoints} waypoints and ${s.routes} routes. They are added to the ones here.`
+      : `From ${when}: ${s.waypoints} waypoints, ${s.routes} routes, tracks and settings. This replaces the ones here, and the app reloads.`;
+    confirm('Restore this backup?', message, async () => {
+      handle?.dismiss();
+      await new Promise((r) => setTimeout(r, 400));
+      await api.backupApply();
+    }, { confirmLabel: 'Restore', destructive: !phone });
+  }));
+  const status = await api.backupStatus();
+  addRow(content, row('Daily backup', status.folder
+    ? `On, to ${status.folder}${status.last ? ` · last ${new Date(status.last).toLocaleDateString()}` : ''}`
+    : 'Off: pick a folder (OneDrive, Google Drive, USB…) to turn it on', async () => {
+    const s = await api.backupChooseFolder();
+    if (s) {
+      toast('Daily backup on: the first one is saved');
+      handle?.dismiss();
+      showBackup();
+    }
+  }));
+  if (status.folder) {
+    addRow(content, row('Turn daily backup off', 'Backups already saved stay in the folder', async () => {
+      await api.backupOff();
+      handle?.dismiss();
+      showBackup();
+    }));
+  }
+  content.append(caption('The daily backup keeps the newest 5 in the folder.', 4));
+  handle = showPanel('Backup and restore', content);
 }

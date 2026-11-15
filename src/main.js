@@ -11,9 +11,17 @@ const fsp = require('fs/promises');
 const path = require('path');
 const zlib = require('zlib');
 const Database = require('better-sqlite3');
+const { readZip, writeZip } = require('./zip.js');
 
 const FILE_SCHEME = 'seabathy-file';
 const TILE_SCHEME = 'seabathy-tiles';
+/** The first KML inside a KMZ, as text. */
+function kmlFromKmz(buffer) {
+  const entry = readZip(buffer).find((e) => /\.kml$/i.test(e.name));
+  if (!entry) throw new Error('This KMZ has no KML inside');
+  return entry.data.toString('utf8');
+}
+
 const STORE_NAMES = new Set(['prefs', 'waypoints', 'routes', 'layers', 'layers-unavailable', 'sources', 'tracks', 'recent', 'places', 'settings']);
 const FILE_DIRS = new Set(['conditions', 'tides']);
 
@@ -522,6 +530,42 @@ app.whenReady().then(() => {
 
   ipcMain.handle('store:load', (_e, name) => readStore(name));
   ipcMain.handle('store:save', (_e, name, data) => writeAtomic(storePath(name), JSON.stringify(data, null, 1)));
+
+  // Backup and restore (see backup.js).
+  const backup = require('./backup.js').create({
+    readStore, dataDir, version: app.getVersion(),
+    writeStore: (name, data) => writeAtomic(storePath(name), JSON.stringify(data, null, 1))
+  });
+  ipcMain.handle('backup:save', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showSaveDialog(win, { defaultPath: backup.defaultName(), filters: [{ name: 'SeaBathy backup', extensions: ['zip'] }] });
+    if (result.canceled || !result.filePath) return null;
+    await fsp.writeFile(result.filePath, await backup.build());
+    log('Backup', 'saved');
+    return path.basename(result.filePath);
+  });
+  ipcMain.handle('backup:open', async (event) => {
+    const file = await pickFile(event, 'Restore a backup', [{ name: 'SeaBathy backup', extensions: ['zip'] }]);
+    return file ? backup.open(file) : null;
+  });
+  ipcMain.handle('backup:apply', async (event) => {
+    await backup.apply();
+    log('Backup', 'restored');
+    event.sender.reloadIgnoringCache();
+  });
+  ipcMain.handle('backup:status', () => backup.status());
+  ipcMain.handle('backup:chooseFolder', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showOpenDialog(win, { title: 'Folder for the daily backup', properties: ['openDirectory', 'createDirectory'] });
+    if (result.canceled || !result.filePaths[0]) return null;
+    await backup.setFolder(result.filePaths[0]);
+    return backup.status();
+  });
+  ipcMain.handle('backup:off', () => backup.setFolder(null));
+  const daily = () => backup.autoBackup().then((saved) => { if (saved) log('Backup', 'daily backup saved'); })
+    .catch((e) => log('Backup', `daily backup FAILED: ${e.message}`));
+  setTimeout(daily, 20000);
+  setInterval(daily, 3 * 60 * 60 * 1000);
   ipcMain.handle('store:folder', () => {
     fs.mkdirSync(dataDir(), { recursive: true });
     return shell.openPath(dataDir());
@@ -589,8 +633,12 @@ app.whenReady().then(() => {
   ipcMain.handle('file:exists', async (_e, file) => fsp.access(file).then(() => true, () => false));
   ipcMain.handle('file:openText', async (event, extensions) => {
     const file = await pickFile(event, 'Open', [{ name: 'Files', extensions }]);
-    return file ? { name: path.basename(file), text: await fsp.readFile(file, 'utf8') } : null;
+    if (!file) return null;
+    // A KMZ is a zip with the KML inside.
+    if (/\.kmz$/i.test(file)) return { name: path.basename(file), text: kmlFromKmz(await fsp.readFile(file)) };
+    return { name: path.basename(file), text: await fsp.readFile(file, 'utf8') };
   });
+  ipcMain.handle('zip:kml', (_e, bytes) => kmlFromKmz(Buffer.from(bytes)));
   ipcMain.handle('file:saveText', async (event, defaultName, text, extensions) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const result = await dialog.showSaveDialog(win, { defaultPath: defaultName, filters: [{ name: 'Files', extensions }] });

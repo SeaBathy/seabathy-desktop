@@ -502,8 +502,14 @@ function bindDragAndDrop() {
     const path = api.pathForFile(file);
     if (/\.tiff?$/i.test(path)) loadGeoTiff(await api.tifFromPath(path));
     else if (/\.mbtiles$/i.test(path)) loadMbtilesPath(path);
-    else if (/\.gpx$/i.test(path)) features.gpx?.importText(file.name, await file.text());
-    else toast('Drop a GeoTIFF (.tif), MBTiles or GPX file');
+    else if (/\.(gpx|kml)$/i.test(path)) features.gpx?.importText(file.name, await file.text());
+    else if (/\.kmz$/i.test(path)) {
+      try {
+        features.gpx?.importText(file.name, await api.kmlFromKmz(new Uint8Array(await file.arrayBuffer())));
+      } catch (error) {
+        toast(`Couldn't read ${file.name}: ${error.message}`);
+      }
+    } else toast('Drop a GeoTIFF (.tif), MBTiles, GPX, KML or KMZ file');
   });
 }
 

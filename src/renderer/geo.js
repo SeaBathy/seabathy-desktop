@@ -148,6 +148,37 @@ export function fromGpx(text) {
   return { waypoints, routes };
 }
 
+/**
+ * Waypoints and routes from a Google Earth KML file: each point a waypoint,
+ * each line a route (long recorded paths thinned like GPX tracks). Shapes are skipped.
+ */
+export function fromKml(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('This file is not valid KML');
+  if (doc.documentElement?.localName !== 'kml') throw new Error('This file is not KML');
+  const child = (el, name) => [...el.children].find((c) => c.localName === name)?.textContent?.trim() || '';
+  const coords = (text) => text.trim().split(/\s+/).map((t) => {
+    const [lng, lat] = t.split(',').map(Number);
+    return { lat, lng };
+  }).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180);
+  const plain = (html) => html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
+  const waypoints = [];
+  const routes = [];
+  for (const pm of doc.getElementsByTagNameNS('*', 'Placemark')) {
+    const name = child(pm, 'name');
+    const desc = plain(child(pm, 'description'));
+    for (const pt of pm.getElementsByTagNameNS('*', 'Point')) {
+      const p = coords(child(pt, 'coordinates'))[0];
+      if (p) waypoints.push({ ...p, name, desc, icon: 'marker', color: null });
+    }
+    for (const line of pm.getElementsByTagNameNS('*', 'LineString')) {
+      const points = coords(child(line, 'coordinates'));
+      if (points.length >= 2) routes.push({ name: name || 'Imported route', points: thin(points, 500) });
+    }
+  }
+  return { waypoints, routes };
+}
+
 function thin(points, max) {
   if (points.length <= max) return points;
   const step = points.length / max;
