@@ -176,6 +176,14 @@ export class NavFormat {
   }
 
   /** Sea level against its average, given in cm: cm, or inches with tides in feet. */
+  /** Sea level against its long-term average: "6 cm above average". */
+  seaLevelVsAverage(cm) {
+    const a = Math.abs(cm);
+    if (a < 0.5) return 'about average';
+    const amount = this.units.tide === HeightUnit.FEET ? `${(a / 2.54).toFixed(1)} in` : `${a.toFixed(0)} cm`;
+    return `${amount} ${cm > 0 ? 'above' : 'below'} average`;
+  }
+
   seaLevel(cm) {
     const sign = cm >= 0 ? '+' : '';
     return this.units.tide === HeightUnit.FEET ? `${sign}${(cm / 2.54).toFixed(1)} in` : `${sign}${cm.toFixed(0)} cm`;

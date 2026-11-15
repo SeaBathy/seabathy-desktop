@@ -13,6 +13,8 @@ import * as client from '../conditions/client.js';
 import { ConditionsStore } from '../conditions/store.js';
 import { ColourChoice, COLOUR_CHOICES, ArrowChoice, resolveArrow, DirectionStyle, DIRECTION_STYLES, ColourScale, renderPicture } from '../conditions/picture.js';
 import { FlowLines } from '../conditions/flowLines.js';
+import * as Contours from '../conditions/contours.js';
+import { astroDay } from '../conditions/astro.js';
 import { OVERLAY_ANCHOR } from '../map/style.js';
 
 const TAG = 'SeaBathyConditions';
@@ -29,6 +31,44 @@ const KEY_AUTO_HOURS = 'conditions_update_hours';
 const KEY_BOX_OPEN = 'conditions_box_open';
 const KEY_BELOW_DEPTH = 'conditions_below_depth_m';
 const KEY_TEMP_RANGE = 'conditions_temperature_range';
+const KEY_CONTOUR_STEP = 'conditions_contour_step';
+const KEY_BAND = 'conditions_target_band';
+const KEY_EDDIES = 'conditions_eddies';
+const CONTOUR_SOURCE = 'conditions-contours-src';
+const CONTOUR_LINE_LAYER = 'conditions-contours';
+const CONTOUR_DASH_LAYER = 'conditions-contours-cold';
+const CONTOUR_LABEL_LAYER = 'conditions-contour-labels';
+const EDDY_LABEL_LAYER = 'conditions-eddy-labels';
+const LABEL_IMAGE = 'cond-lbl:';
+/** Sea level lines drawn round eddies, cm from average. */
+const EDDY_LEVELS_CM = [-30, -20, -10, 10, 20, 30];
+/** When eddies are outlined on the map. */
+const EddyMode = {
+  WITH_SEA_LEVEL: { name: 'WITH_SEA_LEVEL', label: 'With the sea level map' },
+  ALWAYS: { name: 'ALWAYS', label: 'On every sea map (when saved)' },
+  OFF: { name: 'OFF', label: 'Off' }
+};
+/** "0.25", "0.5", "1", "24.5": no trailing zeros. */
+const stepText = (x) => String(Math.round(x * 100) / 100);
+const hhmm = (ms) => (ms === null || ms === undefined ? '—' : new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+let astroCache = null;
+/** The sun and moon for the day [time] falls in, at about [lat]/[lng] (cached: the box asks often). */
+function skyFor(lat, lng, time) {
+  const start = new Date(time);
+  start.setHours(0, 0, 0, 0);
+  const key = `${start.getTime()}:${lat.toFixed(1)}:${lng.toFixed(1)}`;
+  if (astroCache?.key === key) return astroCache.day;
+  const result = astroDay(start.getTime(), lat, lng);
+  astroCache = { key, day: result };
+  return result;
+}
+
+/** [rgb] darkened and greyed, for water outside a target band. */
+export function dimRgb([r, g, b]) {
+  const grey = r * 0.3 + g * 0.59 + b * 0.11;
+  const mix = (v) => Math.round((v * 0.25 + grey * 0.75) * 0.45);
+  return [mix(r), mix(g), mix(b)];
+}
 /** Depths the ocean model reports exactly, in metres. */
 const BELOW_DEPTHS = [10, 20, 30, 50, 100, 150, 200, 300];
 
@@ -38,7 +78,7 @@ const STARTUP_DOWNLOAD_DELAY_MS = 8_000;
 const ONLINE_CHECK_MS = 5_000;
 const CLOSED_MARK = '▾';
 const OPEN_MARK = '▴';
-const ROW_ORDER = ['Wind', 'Current', 'Waves', 'Swell', 'Sea', 'Depth', 'Water'];
+const ROW_ORDER = ['Wind', 'Current', 'Waves', 'Swell', 'Sea', 'Depth', 'Water', 'Sun', 'Moon'];
 /** What "Show on the map" offers (the forecast's own sea temperature is left out: the satellite's is better). */
 const MAP_CHOICES = [
   ColourChoice.WIND, ColourChoice.CURRENT, ColourChoice.WAVES, ColourChoice.SWELL,
@@ -47,7 +87,7 @@ const MAP_CHOICES = [
 ];
 /** The area kept round the spot has this id, so each update replaces it. */
 export const SPOT_ID = 'spot';
-const SPOT_NAME = 'Round my spot';
+const SPOT_NAME = 'My spot';
 const SPOT_RADIUS_KM = 200;
 const AUTO_RETRY_MS = 15 * 60_000;
 const IMAGE_SOURCE = 'conditions-image-src';
@@ -66,7 +106,7 @@ const MAX_WIND_POINTS_PER_SIDE = 10;
 /** Between downloads, so two never land in the same minute of Open-Meteo's limit. */
 const MIN_DOWNLOAD_GAP_MS = 75_000;
 const MAX_ARROWS_PER_SIDE = 12;
-const BOX_ROWS = 7;
+const BOX_ROWS = 9;
 const PLAY_STEP_MS = 650;
 const FORECAST_PICTURE_SIDE = 320;
 const MAX_PICTURE_SIDE = 512;
@@ -173,8 +213,8 @@ export function values(a, lat, lng, time, format) {
   const water = [];
   const satTemp = a.satellites.SEA_TEMP?.sample(lat, lng);
   const modelTemp = f?.sample(F.SEA_TEMP, lat, lng, time, masked);
-  if (Number.isFinite(satTemp)) water.push(`Surface ${format.temperature(satTemp)}`);
-  else if (Number.isFinite(modelTemp)) water.push(`Surface ${format.temperature(modelTemp)}`);
+  if (Number.isFinite(satTemp)) water.push(`Surface temp ${format.temperature(satTemp)}`);
+  else if (Number.isFinite(modelTemp)) water.push(`Surface temp ${format.temperature(modelTemp)}`);
   const chl = a.satellites.CHLOROPHYLL?.sample(lat, lng);
   if (Number.isFinite(chl) && a.isSea(lat, lng) !== false) water.push(`chlorophyll ${chl < 1 ? chl.toFixed(2) : chl.toFixed(1)} mg/m³`);
   if (water.length) out.push({ towardsDegrees: null, text: water.join(' · '), row: 'Sea' });
@@ -187,14 +227,22 @@ export function values(a, lat, lng, time, format) {
       return masked ? s.sampleToShore(lat, lng) : s.sample(lat, lng);
     };
     const below = coarse('TEMP_BELOW');
-    if (Number.isFinite(below)) out.push({ towardsDegrees: null, text: `${format.depth(a.belowDepthM)} down ${format.temperature(below)}`, row: 'Depth' });
+    if (Number.isFinite(below)) out.push({ towardsDegrees: null, text: `Sea temp ${format.depth(a.belowDepthM)} down ${format.temperature(below)}`, row: 'Depth' });
     const surface = [];
     const salinity = coarse('SALINITY');
     if (Number.isFinite(salinity)) surface.push(`Salinity ${salinity.toFixed(1)}`);
     const level = coarse('SEA_LEVEL');
-    if (Number.isFinite(level)) surface.push(`sea level ${format.seaLevel(level)}`);
-    if (surface.length) out.push({ towardsDegrees: null, text: surface.join(' · '), row: 'Water' });
+    if (Number.isFinite(level)) surface.push(`sea level ${format.seaLevelVsAverage(level)}`);
+    if (surface.length) { const text = surface.join(' · '); out.push({ towardsDegrees: null, text: text[0].toUpperCase() + text.slice(1), row: 'Water' }); }
   }
+
+  // Worked out here, not downloaded.
+  const sky = skyFor(lat, lng, time);
+  out.push({ towardsDegrees: null, text: `Sun up ${hhmm(sky.sunrise)} · down ${hhmm(sky.sunset)} · first light ${hhmm(sky.firstLight)}`, row: 'Sun' });
+  const bites = [];
+  if (sky.majors.length) bites.push(`major ${sky.majors.map(hhmm).join(', ')}`);
+  if (sky.minors.length) bites.push(`minor ${sky.minors.map(hhmm).join(', ')}`);
+  out.push({ towardsDegrees: null, text: `Moon ${Math.round(sky.illumination * 100)}% ${sky.phaseName}${bites.length ? ` · solunar ${bites.join(' · ')}` : ''}`, row: 'Moon' });
   return out;
 }
 
@@ -269,6 +317,14 @@ export function create(app) {
     const p = (prefs.getString(KEY_TEMP_RANGE) || '').split(',').map(Number);
     return p.length === 2 && p.every(Number.isFinite) && p[0] < p[1] ? p : null;
   })();
+  /** Temperature lines: 0 off, -1 automatic, else the step in the user's degrees. */
+  let contourStep = prefs.getNumber(KEY_CONTOUR_STEP, -1);
+  /** A temperature band to chase, in °C: shown bright, the rest dimmed; null for none. */
+  let targetBand = (() => {
+    const p = (prefs.getString(KEY_BAND) || '').split(',').map(Number);
+    return p.length === 2 && p.every(Number.isFinite) && p[0] < p[1] ? p : null;
+  })();
+  let eddyMode = EddyMode[prefs.getString(KEY_EDDIES)] || EddyMode.WITH_SEA_LEVEL;
   let directionStyle = DirectionStyle[prefs.getString(KEY_STYLE)] || DirectionStyle.FLOW;
   let boxShown = prefs.getBoolean(KEY_BOX, true);
   let fixedSpot = (() => {
@@ -420,6 +476,7 @@ export function create(app) {
     if (map.getLayer(IMAGE_LAYER)) map.removeLayer(IMAGE_LAYER);
     if (map.getSource(IMAGE_SOURCE)) map.removeSource(IMAGE_SOURCE);
     map.getSource(ARROW_SOURCE)?.setData(EMPTY);
+    map.getSource(CONTOUR_SOURCE)?.setData(EMPTY);
     lastPicture = null;
   }
 
@@ -525,7 +582,7 @@ export function create(app) {
     const choice = colour;
     showFlowLines(a, time);
     // A satellite picture doesn't change with the time; a range set for the colours changes any temperature's.
-    const key = `${a.id}:${a.fetchedMillis}:${choice.name}:${choice.forecast ? Math.floor(time / PICTURE_STEP_MS) : 0}${choice.isTemperature ? `:${temperatureRange}` : ''}`;
+    const key = `${a.id}:${a.fetchedMillis}:${choice.name}:${choice.forecast ? Math.floor(time / PICTURE_STEP_MS) : 0}${choice.isTemperature ? `:${temperatureRange}:${targetBand}` : ''}`;
     const token = ++drawToken;
     // Drawn in the next frame, so a burst of changes (dragging the slider) draws once.
     requestAnimationFrame(() => {
@@ -540,7 +597,8 @@ export function create(app) {
           if (sample) {
             const started = performance.now();
             const maxSide = satellite ? Math.min(MAX_PICTURE_SIDE, Math.max(satellite.grid.rows, satellite.grid.cols) * 2) : FORECAST_PICTURE_SIDE;
-            const pixels = renderPicture(a.south, a.west, a.north, a.east, Math.max(64, maxSide), scaleFor(a, choice), sample);
+            const band = choice.isTemperature ? targetBand : null;
+            const pixels = renderPicture(a.south, a.west, a.north, a.east, Math.max(64, maxSide), scaleFor(a, choice), sample, 255, band);
             const canvas = document.createElement('canvas');
             canvas.width = pixels.width;
             canvas.height = pixels.height;
@@ -552,6 +610,11 @@ export function create(app) {
       }
       showPicture(a, picture);
       map.getSource(ARROW_SOURCE)?.setData(directionStyle.arrows ? arrowGeoJson(a, flow(), time) : EMPTY);
+      try {
+        map.getSource(CONTOUR_SOURCE)?.setData(contourData(a, choice));
+      } catch (error) {
+        logError(TAG, 'contours FAILED', error);
+      }
     });
   }
 
@@ -577,7 +640,7 @@ export function create(app) {
       map.addLayer({
         id: IMAGE_LAYER, type: 'raster', source: IMAGE_SOURCE,
         paint: { 'raster-opacity': opacity, 'raster-resampling': 'linear', 'raster-fade-duration': 0 }
-      }, map.getLayer(ARROW_LAYER) ? ARROW_LAYER : nextAfterAnchor());
+      }, map.getLayer(CONTOUR_LINE_LAYER) ? CONTOUR_LINE_LAYER : map.getLayer(ARROW_LAYER) ? ARROW_LAYER : nextAfterAnchor());
     }
     lastPicture = picture;
   }
@@ -697,7 +760,12 @@ export function create(app) {
     } else {
       legend.hidden = false;
       const scale = scaleFor(a, colour);
-      const stops = Array.from({ length: 16 }, (_, i) => `rgb(${scale.colourAt(i / 15).join(',')})`);
+      const band = colour.isTemperature ? targetBand : null;
+      const stops = Array.from({ length: 32 }, (_, i) => {
+        const rgb = scale.colourAt(i / 31);
+        const v = scale.valueAt(i / 31);
+        return `rgb(${(!band || (v >= band[0] && v <= band[1]) ? rgb : dimRgb(rgb)).join(',')})`;
+      });
       legendBar.style.background = `linear-gradient(to right, ${stops.join(',')})`;
       legendLow.textContent = legendValue(scale.valueAt(0));
       legendMid.textContent = legendValue(scale.valueAt(0.5));
@@ -1025,6 +1093,17 @@ export function create(app) {
       refreshDialog();
     }));
     addRow(content, row('Sea temperature colours', temperatureRangeLabel(), pickTemperatureRange));
+    addRow(content, row('Temperature lines', contourStepLabel(), pickContourStep));
+    addRow(content, row('Target temperature band', targetBandLabel(), pickTargetBand));
+    addRow(content, row('Eddy outlines', eddyMode.label, () => {
+      const choices = Object.values(EddyMode);
+      showChoicePanel('Eddy outlines', choices.map((c) => c.label), choices.indexOf(eddyMode), (i) => {
+        eddyMode = choices[i];
+        prefs.put(KEY_EDDIES, eddyMode.name);
+        if (shown) redraw();
+        refreshDialog();
+      });
+    }));
     addRow(content, row('Temperature at depth', `${new NavFormat(units()).depth(belowDepthM)} down`, () => {
       const format = new NavFormat(units());
       showChoicePanel('How far down', BELOW_DEPTHS.map((d) => format.depth(d)), BELOW_DEPTHS.indexOf(belowDepthM), (i) => {
@@ -1049,7 +1128,7 @@ export function create(app) {
     opacitySlider.addEventListener('change', () => prefs.put(KEY_OPACITY, opacity));
     content.append(opacityLabel, opacitySlider);
 
-    content.append(sectionHeader('SAVED AREAS'));
+    content.append(sectionHeader('DOWNLOADED AREAS'));
     if (!summaries.length) content.append(caption('None yet.', 0));
     const format = new NavFormat(units());
     for (const s of summaries) {
@@ -1057,10 +1136,10 @@ export function create(app) {
       const forecastText = s.forecastUntilMillis !== null
         ? (s.forecastUntilMillis < Date.now() ? `forecast ran out ${day(s.forecastUntilMillis)}` : `forecast to ${day(s.forecastUntilMillis)}`)
         : null;
-      const satText = s.satellites.length > 1 ? `${s.satellites.length} ocean layers`
+      const satText = s.satellites.length > 1 ? `${s.satellites.length} satellite maps`
         : s.satellites.length ? SatelliteKind[s.satellites[0]]?.label.toLowerCase() : null;
       const detail = [active && shown ? 'Showing' : null, forecastText, satText, `got ${format.clock(s.fetchedMillis)}`, `${(s.bytes / 1024).toFixed(0)} KB`].filter(Boolean).join(' · ');
-      addRow(content, row((active ? '● ' : '') + s.name, detail, () => areaOptions(s)));
+      addRow(content, row((active ? '● ' : '') + (s.id === SPOT_ID ? SPOT_NAME : s.name), detail, () => areaOptions(s)));
     }
 
     content.append(sectionHeader('DOWNLOADS'));
@@ -1075,13 +1154,200 @@ export function create(app) {
         refreshDialog();
       });
     }));
-    addRow(content, row('Satellite and ocean layers', withSatellite ? 'Yes (usually 2 to 5 days old)' : 'No', () => {
+    addRow(content, row('Satellite sea maps', withSatellite ? 'Yes: sea temp, temp breaks, chlorophyll, sea level, salinity (2 to 5 days old)' : 'No: forecast only', () => {
       withSatellite = !withSatellite;
       prefs.put(KEY_SATELLITE, withSatellite);
       refreshDialog();
     }));
     if (status) content.append(caption(status, 2));
     content.append(caption("Forecast model points are about 8 km apart, so it's less accurate close to shore and in channels. Not for navigation.", 8));
+  }
+
+  // Temperature lines, target band and eddy outlines -------------------------------
+
+  function contourStepLabel() {
+    const unit = units().temperature;
+    if (contourStep === 0) return 'Off';
+    if (contourStep < 0) return 'Automatic spacing';
+    return `Every ${stepText(contourStep)} ${unit.label}`;
+  }
+
+  function pickContourStep() {
+    const unit = units().temperature;
+    const choices = [-1, ...Contours.CONTOUR_STEPS, 0];
+    const labels = choices.map((x) => (x < 0 ? 'Automatic spacing' : x === 0 ? 'Off' : `Every ${stepText(x)} ${unit.label}`));
+    showChoicePanel('Temperature lines', labels, Math.max(0, choices.indexOf(contourStep)), (i) => {
+      contourStep = choices[i];
+      prefs.put(KEY_CONTOUR_STEP, contourStep);
+      if (shown) redraw();
+      refreshDialog();
+    });
+  }
+
+  function targetBandLabel() {
+    if (!targetBand) return 'Off: set one to chase a temperature';
+    const format = new NavFormat(units());
+    return `${format.temperature(targetBand[0])} to ${format.temperature(targetBand[1])}`;
+  }
+
+  function pickTargetBand() {
+    showChoicePanel('Target temperature band', ['Off', 'Set the band'], targetBand ? 1 : 0, (i) => {
+      if (i === 0) applyTargetBand(null);
+      else editTargetBand();
+    });
+  }
+
+  function editTargetBand() {
+    const unit = units().temperature;
+    const a = area || spotArea;
+    const auto = a?.satellites.SEA_TEMP ? ColourScale.forChoice(ColourChoice.SEA_TEMP_SATELLITE, a.satellites.SEA_TEMP.values) : null;
+    const mid = auto ? (auto.low + auto.high) / 2 : 23;
+    const [startLow, startHigh] = targetBand || [mid - 0.5, mid + 0.5];
+    const content = body();
+    content.append(caption('Water in this range shows bright with bold edges; the rest is dimmed. Works on the sea temperature maps.', 4));
+    content.append(caption(`From (${unit.label})`, 8));
+    const low = input({ value: unit.of(startLow).toFixed(1) });
+    addRow(content, low);
+    content.append(caption(`To (${unit.label})`, 8));
+    const high = input({ value: unit.of(startHigh).toFixed(1) });
+    addRow(content, high);
+    const handle = showPanel('Target temperature band', content, {
+      actionLabel: 'Save',
+      onAction: () => {
+        const x = Number.parseFloat(low.value);
+        const y = Number.parseFloat(high.value);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || x >= y) {
+          toast('Enter two temperatures, the coolest first');
+          return;
+        }
+        handle.dismiss();
+        applyTargetBand([unit.toCelsius(x), unit.toCelsius(y)]);
+      }
+    });
+  }
+
+  function applyTargetBand(band) {
+    targetBand = band;
+    prefs.put(KEY_BAND, band ? `${band[0].toFixed(3)},${band[1].toFixed(3)}` : '');
+    lastPicture = null;
+    if (shown) redraw();
+    refreshDialog();
+  }
+
+  /** The map's lines for [choice]: temperature lines, the band's edges, eddy outlines. */
+  function contourData(a, choice) {
+    const unit = units().temperature;
+    const list = [];
+    let eddies = [];
+    const tempGrid = choice === ColourChoice.SEA_TEMP_SATELLITE || choice === ColourChoice.SEA_TEMP_BREAKS ? a.satellites.SEA_TEMP
+      : choice === ColourChoice.TEMP_BELOW ? a.satellites.TEMP_BELOW : null;
+    if (tempGrid && (contourStep !== 0 || targetBand)) {
+      const smooth = Contours.smooth(tempGrid.grid, tempGrid.values, tempGrid.grid.size > 40000 ? 2 : 1);
+      if (contourStep !== 0) {
+        const r = Contours.range(smooth);
+        if (r) {
+          const low = unit.of(r[0]);
+          const high = unit.of(r[1]);
+          const step = contourStep < 0 ? Contours.autoStep(high - low) : contourStep;
+          const lv = Contours.levels(low, high, step);
+          for (const line of Contours.lines(tempGrid.grid, smooth, lv.map((x) => unit.toCelsius(x)), 6)) {
+            list.push({ line, kind: 'temp', label: `${stepText(unit.of(line.level))}°` });
+          }
+        }
+      }
+      if (targetBand) {
+        // From the unsmoothed values, so the edges sit exactly where the bright water ends.
+        for (const line of Contours.lines(tempGrid.grid, tempGrid.values, targetBand, 4)) {
+          list.push({ line, kind: 'band', label: `${unit.of(line.level).toFixed(1)}${unit.label}` });
+        }
+      }
+    }
+    const level = a.satellites.SEA_LEVEL;
+    if (level && (eddyMode === EddyMode.ALWAYS || (eddyMode === EddyMode.WITH_SEA_LEVEL && choice === ColourChoice.SEA_LEVEL))) {
+      for (const line of Contours.lines(level.grid, level.values, EDDY_LEVELS_CM, 4)) {
+        list.push({ line, kind: line.level > 0 ? 'warm' : 'cold', label: `${line.level > 0 ? '+' : ''}${line.level}` });
+      }
+      eddies = Contours.eddies(level.grid, level.values);
+    }
+    return list.length || eddies.length ? Contours.contourGeoJson(list, eddies) : EMPTY;
+  }
+
+  /** A label drawn as an image (this map has no fonts loaded). */
+  function labelImage(id) {
+    const text = id.slice(LABEL_IMAGE.length);
+    const eddy = text === 'W' || text === 'C';
+    const ratio = 2;
+    const size = (eddy ? 17 : 10.5) * ratio;
+    const c = document.createElement('canvas');
+    const g = c.getContext('2d');
+    const font = `${eddy ? 'bold ' : '600 '}${size}px system-ui, sans-serif`;
+    g.font = font;
+    const w = Math.ceil(g.measureText(text).width) + 6 * ratio;
+    const h = Math.ceil(size * 1.4);
+    c.width = w;
+    c.height = h;
+    g.font = font;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineJoin = 'round';
+    g.lineWidth = (eddy ? 4 : 3) * ratio / 1.5;
+    g.strokeStyle = eddy ? '#FFFFFF' : '#0B1622';
+    g.strokeText(text, w / 2, h / 2);
+    g.fillStyle = text === 'W' ? '#D8281E' : text === 'C' ? '#1E4FD8' : '#FFFFFF';
+    g.fillText(text, w / 2, h / 2);
+    map.addImage(id, g.getImageData(0, 0, w, h), { pixelRatio: ratio });
+  }
+
+  let labelListener = false;
+
+  function installContourLayers() {
+    try {
+      if (!labelListener) {
+        labelListener = true;
+        map.on('styleimagemissing', (e) => {
+          if (e.id?.startsWith(LABEL_IMAGE) && !map.hasImage(e.id)) labelImage(e.id);
+        });
+      }
+      if (!map.getSource(CONTOUR_SOURCE)) map.addSource(CONTOUR_SOURCE, { type: 'geojson', data: EMPTY });
+      const before = map.getLayer(ARROW_LAYER) ? ARROW_LAYER : nextAfterAnchor();
+      const isLine = ['==', ['geometry-type'], 'LineString'];
+      if (!map.getLayer(CONTOUR_LINE_LAYER)) {
+        map.addLayer({
+          id: CONTOUR_LINE_LAYER, type: 'line', source: CONTOUR_SOURCE,
+          filter: ['all', isLine, ['!=', ['get', 'kind'], 'cold']],
+          layout: { 'line-join': 'round' },
+          paint: {
+            'line-color': ['match', ['get', 'kind'], 'band', '#FFFFFF', 'warm', '#5A0A0A', 'rgba(11,22,34,0.85)'],
+            'line-width': ['match', ['get', 'kind'], 'band', 2.6, 'warm', 1.6, 1]
+          }
+        }, before);
+      }
+      if (!map.getLayer(CONTOUR_DASH_LAYER)) {
+        map.addLayer({
+          id: CONTOUR_DASH_LAYER, type: 'line', source: CONTOUR_SOURCE,
+          filter: ['all', isLine, ['==', ['get', 'kind'], 'cold']],
+          paint: { 'line-color': '#0A1E5A', 'line-width': 1.6, 'line-dasharray': [3, 2] }
+        }, before);
+      }
+      if (!map.getLayer(CONTOUR_LABEL_LAYER)) {
+        map.addLayer({
+          id: CONTOUR_LABEL_LAYER, type: 'symbol', source: CONTOUR_SOURCE, filter: isLine,
+          layout: {
+            'symbol-placement': 'line', 'symbol-spacing': 220,
+            'icon-image': ['concat', LABEL_IMAGE, ['get', 'label']],
+            'icon-rotation-alignment': 'map', 'icon-keep-upright': true
+          }
+        }, before);
+      }
+      if (!map.getLayer(EDDY_LABEL_LAYER)) {
+        map.addLayer({
+          id: EDDY_LABEL_LAYER, type: 'symbol', source: CONTOUR_SOURCE, filter: ['==', ['geometry-type'], 'Point'],
+          layout: { 'icon-image': ['concat', LABEL_IMAGE, ['get', 'label']], 'icon-allow-overlap': true }
+        }, before);
+      }
+    } catch (error) {
+      logError(TAG, 'installing contour layers FAILED', error);
+    }
   }
 
   function temperatureRangeLabel() {
@@ -1454,6 +1720,7 @@ export function create(app) {
           paint: { 'icon-opacity': arrowOpacity() }
         }, nextAfterAnchor());
       }
+      installContourLayers();
       // A new style has none of the layers: put the picture back.
       const picture = lastPicture;
       lastPicture = null;

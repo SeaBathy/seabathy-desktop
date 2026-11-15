@@ -180,7 +180,7 @@ export const latitudeOf = (y) => ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 1
  * the map stretches it over the area's corners. sampler(lat, lng) gives the
  * value in display units, or NaN.
  */
-export function renderPicture(south, west, north, east, maxSide, scale, sampler, alpha = 255) {
+export function renderPicture(south, west, north, east, maxSide, scale, sampler, alpha = 255, band = null) {
   const yTop = mercatorY(north);
   const yBottom = mercatorY(south);
   const widthDeg = east - west;
@@ -199,9 +199,17 @@ export function renderPicture(south, west, north, east, maxSide, scale, sampler,
   for (let y = 0; y < height; y++) {
     const lat = latitudeOf(yTop - ((y + 0.5) / height) * mapHeight);
     for (let x = 0; x < width; x++) {
-      const t = scale.position(sampler(lat, west + ((x + 0.5) / width) * widthDeg));
+      const value = sampler(lat, west + ((x + 0.5) / width) * widthDeg);
+      const t = scale.position(value);
       if (Number.isNaN(t)) continue;
-      const [r, g, b] = scale.colourAt(t);
+      let [r, g, b] = scale.colourAt(t);
+      if (band && (value < band[0] || value > band[1])) {
+        // Outside the target band: greyed and darkened.
+        const grey = r * 0.3 + g * 0.59 + b * 0.11;
+        r = Math.round((r * 0.25 + grey * 0.75) * 0.45);
+        g = Math.round((g * 0.25 + grey * 0.75) * 0.45);
+        b = Math.round((b * 0.25 + grey * 0.75) * 0.45);
+      }
       const i = (y * width + x) * 4;
       rgba[i] = r;
       rgba[i + 1] = g;
