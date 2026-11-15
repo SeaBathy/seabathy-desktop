@@ -302,6 +302,8 @@ export function create(app) {
   document.addEventListener('nav-units-changed', () => {
     if (shown && area) refreshCard(area);
     updateBox();
+    // The temperature lines' labels and steps follow the unit.
+    if (shown) redraw();
   });
 
   let shown = prefs.getBoolean(KEY_SHOWN, false);
@@ -358,6 +360,8 @@ export function create(app) {
   let dialogBody = null;
   let lastPicture = null; // { url, key }
   let drawToken = 0;
+  let contourCache = null;
+  let contourShown = null;
   let scaleCache = null;
   let startupDone = false;
 
@@ -480,6 +484,7 @@ export function create(app) {
     if (map.getSource(IMAGE_SOURCE)) map.removeSource(IMAGE_SOURCE);
     map.getSource(ARROW_SOURCE)?.setData(EMPTY);
     map.getSource(CONTOUR_SOURCE)?.setData(EMPTY);
+    contourShown = null;
     lastPicture = null;
   }
 
@@ -614,7 +619,13 @@ export function create(app) {
       showPicture(a, picture);
       map.getSource(ARROW_SOURCE)?.setData(directionStyle.arrows ? arrowGeoJson(a, flow(), time) : EMPTY);
       try {
-        map.getSource(CONTOUR_SOURCE)?.setData(contourData(a, choice));
+        // The lines don't change with the forecast time: worked out once per area and settings.
+        const contourKey = `${a.id}:${a.fetchedMillis}:${choice.name}:${contourStep}:${targetBand}:${eddyMode.name}:${units().temperature.label}`;
+        if (contourCache?.key !== contourKey) contourCache = { key: contourKey, data: contourData(a, choice) };
+        if (contourShown !== contourCache) {
+          map.getSource(CONTOUR_SOURCE)?.setData(contourCache.data);
+          contourShown = contourCache;
+        }
       } catch (error) {
         logError(TAG, 'contours FAILED', error);
       }
@@ -1757,6 +1768,8 @@ export function create(app) {
         }, nextAfterAnchor());
       }
       installContourLayers();
+      // A new style starts with an empty source.
+      contourShown = null;
       // A new style has none of the layers: put the picture back.
       const picture = lastPicture;
       lastPicture = null;
