@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Marine park zones rebuilt** from each authority's own zoning (Australian Marine Parks,
+  GBRMPA, Queensland, NSW, SA and WA fishing orders) and grouped by the official zone name, not a
+  rough category. Habitat protection and conservation park zones now show as limited fishing,
+  WA's general use and recreation areas are no longer marked no-take, island land no longer
+  shows as zones, and tapping a zone shows its official name and who publishes it.
+- **Reef and island names:** names now read properly (McDonald, Le Geographe's), repeats close
+  together are gone, and Antarctic and garbled names are left out.
 - **Pipelines, cables and mooring areas** in the buoys layer: 20 tiny areas had been simplified to
   fewer than 4 corners; they're repaired.
 

@@ -1,4 +1,4 @@
-// Marine park zones (every Australian marine park, Commonwealth and state, from CAPAD),
+// Marine park zones (Commonwealth and every state, from each authority's own zoning),
 // reef and island names, and boat ramps. Kept in step with the phone app's MarineZones.kt;
 // the data is built by testing/zones in the dev folder. This map has no fonts, so names
 // are drawn as small images, made when first needed.
@@ -8,10 +8,10 @@ import RAMPS from '../data/ramps.geojson';
 import { prefs } from '../core.js';
 import { addImageResolver } from './imageResolver.js';
 
-export const ZONES_CREDIT = 'Marine parks: CAPAD 2024, DCCEEW (CC BY 4.0)';
+export const ZONES_CREDIT = 'Marine park zones: DCCEEW, GBRMPA, Queensland Government, NSW DPI, SA DEW, WA DPIRD, CAPAD 2024 (CC BY 4.0)';
 export const NAMES_CREDIT = 'Names: Geoscience Australia gazetteer, GBRMPA (CC BY 4.0)';
 export const RAMPS_CREDIT = 'Boat ramps: © OpenStreetMap contributors';
-export const NOT_OFFICIAL = 'A guide only, from national data that can lag behind changes. The official zoning map and rules '
+export const NOT_OFFICIAL = 'A guide only, from government data that can lag behind changes. The official zoning map and rules '
   + 'for the park are the law: check them before you fish. Not for navigation.';
 
 export const ZoneMode = { OFF: 'OFF', NO_TAKE: 'NO_TAKE', ALL: 'ALL' };
@@ -21,14 +21,23 @@ const COLOURS = { nt: '#22C55E', lim: '#EAB308', gen: '#60A5FA' };
 const RANK = { nt: 3, lim: 2, gen: 1 };
 const TEXT = 'txt:';
 
+const SOURCE_NAMES = {
+  DCCEEW: 'Australian Marine Parks (DCCEEW)', GBRMPA: 'Great Barrier Reef Marine Park Authority',
+  'Qld Gov': 'Queensland Government', 'NSW DPI': 'NSW DPI Fisheries', 'SA DEW': 'SA Department for Environment and Water',
+  'WA DPIRD': 'WA DPIRD fishing orders', CAPAD: 'CAPAD 2024 (park outline)',
+};
+
+// q: n park, z official zone name, s waters, src authority, c class.
 export function describeZone(q) {
   const title = q.c === 'nt' ? 'No-take zone' : q.c === 'lim' ? 'Limited fishing zone' : 'General use zone';
+  const restricted = /restricted access|preservation/i.test(q.z || '');
   const what = q.c === 'nt'
-    ? `No-take zone: no fishing or collecting of any kind.${q.i === 'Ia' ? ' Some zones like this are also no entry.' : ''}`
-    : q.c === 'lim' ? 'Limited fishing: some fishing is allowed, with limits on gear and methods (for example no trawling).'
+    ? `No-take zone: no fishing or collecting of any kind.${restricted ? ' Entry is also restricted.' : ''}`
+    : q.c === 'lim' ? "Limited fishing: some fishing is allowed, with limits on gear, methods or species. Check this zone's rules."
       : 'Fishing allowed under the usual rules for the park.';
-  const where = [q.n, q.t, q.s === 'COM' ? 'Commonwealth waters' : q.s].filter(Boolean).join(' · ');
-  return { title, lines: [where, what, NOT_OFFICIAL, ZONES_CREDIT] };
+  const where = [q.n, q.z, q.s === 'COM' ? 'Commonwealth waters' : q.s].filter(Boolean).join(' · ');
+  const from = q.src ? `Zoning from ${SOURCE_NAMES[q.src] || q.src}.` : null;
+  return { title, lines: [where, what, from, NOT_OFFICIAL, ZONES_CREDIT].filter(Boolean) };
 }
 
 /** A label as an image: "txt:<colour>~<text>", with a dark halo. ("|" is the buoy icons' separator.) */
