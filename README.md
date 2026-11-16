@@ -4,7 +4,7 @@
 Your depth maps in 3D, tides, sea conditions and route planning, for Windows. Works anywhere in the world.</p>
 
 <p align="center">
-  <img alt="Version 1.1.1" src="https://img.shields.io/badge/version-1.1.1-0f766e">
+  <img alt="Version 1.1.2" src="https://img.shields.io/badge/version-1.1.2-0f766e">
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?logo=windows&logoColor=white">
   <img alt="Portable, no install" src="https://img.shields.io/badge/install-none%20(portable)-success">
   <img alt="GPL-3.0 licence" src="https://img.shields.io/badge/licence-GPL--3.0-blue">
@@ -68,7 +68,7 @@ same terrain.
 
 ## Download and run
 
-1. Download **[`SeaBathy-Desktop-1.1.1.exe`](download/SeaBathy-Desktop-1.1.1.exe)** (or from
+1. Download **[`SeaBathy-Desktop-1.1.2.exe`](download/SeaBathy-Desktop-1.1.2.exe)** (or from
    the Releases page).
 2. Double-click it. There's nothing to install.
 3. The first time, Windows may say *"Windows protected your PC"*, because the exe isn't

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.2 — 2026-11-16
 
 - **Save any online map offline:** "Save this area offline" now works with every online map;
   what you save, and keeping to each provider's terms, is up to you.
