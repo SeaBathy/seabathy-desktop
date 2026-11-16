@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **Zone, ramp and name details open again:** clicking one on the chart did nothing (an error
+  stopped the popup); it now shows the details.
 - **Marine park zones rebuilt** from each authority's own zoning (Australian Marine Parks,
   GBRMPA, Queensland, NSW, SA and WA fishing orders) and grouped by the official zone name, not a
   rough category. Habitat protection and conservation park zones now show as limited fishing,

@@ -2,6 +2,7 @@
 // reef and island names, and boat ramps. Kept in step with the phone app's MarineZones.kt;
 // the data is built by testing/zones in the dev folder. This map has no fonts, so names
 // are drawn as small images, made when first needed.
+import * as maplibregl from 'maplibre-gl';
 import ZONES from '../data/zones.geojson';
 import PLACES from '../data/places.geojson';
 import RAMPS from '../data/ramps.geojson';
