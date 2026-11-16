@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.1.3 — 2026-11-16
 
+- **The app starts again:** the 1.1.2 download was missing a file and stopped with an error
+  before opening. Fixed, and the build now packs every file the app needs.
 - **One agreement instead of notices everywhere:** on first launch you agree once that SeaBathy is
   not for navigation (also under Settings → Safety and terms, and at seabathy.com/terms). "Not for
   navigation" now always leads the credits line on the chart, and the repeated notices and extra
