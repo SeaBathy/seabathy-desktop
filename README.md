@@ -19,8 +19,9 @@ tides, waypoints and route planning, laid out the same way. Open your depth surv
 the seabed around in 3D with satellite imagery on top, and plan routes that show the least
 depth on every leg. One portable exe: no install, no account, no tracking.
 
-> **Not for navigation.** SeaBathy does not include official nautical charts. Use it
-> alongside proper charts and navigation equipment, never instead of them.
+> **Not for navigation.** SeaBathy is not a nautical chart and must not be used for navigation.
+> Its data comes from public sources and can be wrong or out of date. Use official charts and
+> proper navigation equipment. See the [terms of use](https://seabathy.com/terms).
 
 **New here?** The [how-to guide](https://seabathy.com/guide) shows the whole path in a few minutes: get a free depth file with BathyPicker, open it on your phone or PC, and put it on your chartplotter with AT5 Chart Maker.
 
@@ -125,8 +126,9 @@ or plotter.
 <summary><b>Marine park zones, reef names and boat ramps</b></summary>
 
 Use the **Zones**, **Names** and **Ramps** switches at the top of the side panel (or Settings).
-Zones cover every Australian marine park: no-take in green, limited fishing in yellow, general
-use in blue; show all or only the no-take ones, and click a zone for what's allowed. A guide
+Zones cover every Australian marine park, from each authority's official zoning: no-take in
+green, limited fishing in yellow, general use in blue; show all or only the no-take ones, and
+click a zone for its official name and what's allowed. A guide
 only: the official zoning map is the law.
 </details>
 

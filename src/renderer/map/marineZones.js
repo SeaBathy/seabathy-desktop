@@ -9,7 +9,7 @@ import RAMPS from '../data/ramps.geojson';
 import { prefs } from '../core.js';
 import { addImageResolver } from './imageResolver.js';
 
-export const ZONES_CREDIT = 'Marine park zones: DCCEEW, GBRMPA, Queensland Government, NSW DPI, SA DEW, WA DPIRD, CAPAD 2024 (CC BY 4.0)';
+export const ZONES_CREDIT = 'Marine park zones: DCCEEW, GBRMPA, Queensland Government, NSW DPI, SA DEW, WA DPIRD, CAPAD 2024 (CC BY)';
 export const NAMES_CREDIT = 'Names: Geoscience Australia gazetteer, GBRMPA (CC BY 4.0)';
 export const RAMPS_CREDIT = 'Boat ramps: © OpenStreetMap contributors';
 export const NOT_OFFICIAL = 'A guide only, from government data that can lag behind changes. The official zoning map and rules '
