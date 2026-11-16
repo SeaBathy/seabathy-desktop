@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Pipelines, cables and mooring areas** in the buoys layer: 20 tiny areas had been simplified to
+  fewer than 4 corners; they're repaired.
+
 ## 1.1.2 — 2026-11-16
 
 - **Save any online map offline:** "Save this area offline" now works with every online map;
