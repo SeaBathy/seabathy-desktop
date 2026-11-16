@@ -60,7 +60,7 @@ export function create(app) {
     confirm(
       'Get seabed depths?',
       'Downloads depths for the area on screen from GMRT, which blends ship surveys with the global GEBCO grid, and adds them as a layer that also works in 3D and offline. ' +
-        `Detail is best where ships have surveyed; elsewhere it's much coarser. Up to about 55 MB.${note} Not for navigation.`,
+        `Detail is best where ships have surveyed; elsewhere it's much coarser. Up to about 55 MB.${note}`,
       () => download(area),
       { confirmLabel: 'Download', destructive: false }
     );

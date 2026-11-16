@@ -1,6 +1,6 @@
 // Buoys, beacons, lights, pipelines, submarine cables and mooring areas from free government
 // data (and OpenStreetMap), as on the phone (map/NavMarks.kt). Off by default, and only shown
-// after the user has ticked that it is not for navigation. The data is built by
+// once turned on (the first-launch agreement covers it). The data is built by
 // testing/navmarks in the dev folder.
 
 import * as maplibregl from 'maplibre-gl';
@@ -9,7 +9,7 @@ import MARKS from '../data/navmarks.geojson';
 import LINES from '../data/navlines.geojson';
 
 export const NAV_MARKS_CREDIT = 'Nav marks: Transport for NSW, WA DoT, Vic Gov, Qld Gov, AMSA, NOPTA, Geoscience Australia, ACMA, © OpenStreetMap';
-export const NOT_FOR_NAVIGATION = 'Not for navigation. Positions may be old or wrong, and many marks are missing.';
+export const NOT_FOR_NAVIGATION = 'Positions may be old or wrong, and many marks are missing.';
 const LAYERS = ['navlines-area-fill', 'navlines-area-line', 'navlines-pipelines', 'navlines-cables', 'navmarks'];
 const AREA_KINDS = ['area_anchorage', 'area_mooring', 'area_marina', 'area_channel'];
 const KIND_TITLES = { pipeline: 'Pipeline', cable: 'Submarine cable', area_anchorage: 'Anchorage', area_mooring: 'Mooring area', area_marina: 'Marina', area_channel: 'Shipping channel' };
@@ -172,34 +172,7 @@ export class NavMarks {
   }
 }
 
-/** Asks the user to tick that the layer is not for navigation; [onResult] gets true or false. */
+/** Turning the layer on: the first-launch agreement (ui/safetyTerms.js) already covers it. */
 export function confirmNotForNavigation(onResult) {
-  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; };
-  const scrim = el('div', 'pd-scrim');
-  const card = el('div', 'pd-card pd-confirm');
-  const message = el('div', 'pd-confirm-message',
-    'This layer shows buoys, beacons, lights, moorings, pipelines and submarine cables gathered from free government data and OpenStreetMap.\n\n'
-    + 'It is NOT a nautical chart and must not be used for navigation. Marks can be moved, removed or added at any time, '
-    + 'positions may be old or wrong, many marks are missing, and some types are guessed from the data. '
-    + 'Always use official charts, notices to mariners and your own eyes.');
-  message.style.whiteSpace = 'pre-line';
-  const label = el('label');
-  label.style.cssText = 'display:flex;gap:8px;align-items:center;margin-top:12px;cursor:pointer;';
-  const tick = el('input');
-  tick.type = 'checkbox';
-  label.append(tick, document.createTextNode('I understand this is not for navigation'));
-  const buttons = el('div', 'pd-confirm-buttons');
-  function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); done(false); } }
-  const done = (ok) => { scrim.remove(); document.removeEventListener('keydown', onKey, true); onResult(ok); };
-  const cancel = el('button', 'pd-button', 'Cancel');
-  cancel.addEventListener('click', () => done(false));
-  const ok = el('button', 'pd-button primary', 'Show layer');
-  ok.disabled = true;
-  tick.addEventListener('change', () => { ok.disabled = !tick.checked; });
-  ok.addEventListener('click', () => { if (tick.checked) done(true); });
-  buttons.append(cancel, ok);
-  card.append(el('div', 'pd-confirm-title', 'Not for navigation'), message, label, buttons);
-  scrim.append(card);
-  document.addEventListener('keydown', onKey, true);
-  document.body.append(scrim);
+  onResult(true);
 }

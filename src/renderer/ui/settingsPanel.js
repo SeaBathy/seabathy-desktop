@@ -4,6 +4,7 @@
 import { body, sectionHeader, caption, row, addRow, setRowText, showPanel, showChoicePanel, confirm } from './panels.js';
 import { RASTER_QUALITIES } from '../settings/presets.js';
 import licences from '../licenses.txt';
+import * as safetyTerms from './safetyTerms.js';
 import { toast } from '../core.js';
 
 export const COLOUR_NAMES = ['Marine teal', 'Green', 'Orange', 'Red', 'Purple', 'White'];
@@ -120,6 +121,7 @@ export function showSettings(c) {
   addRow(content, row('Export waypoints and route', 'Save as a GPX file', c.onExportGpx));
   content.append(caption('If something goes wrong, save this log so it can be fixed.', 0));
   addRow(content, row('Export debug log', 'What the app did, and any errors', c.onExportLog));
+  addRow(content, row('Safety and terms', "Not for navigation: what SeaBathy is and isn't", () => safetyTerms.show()));
   addRow(content, row('Licences and credits', 'Open-source libraries and data sources', () => {
     const notices = body();
     const text = document.createElement('pre');

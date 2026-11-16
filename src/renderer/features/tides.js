@@ -322,7 +322,7 @@ export function create(app) {
     content.append(caption((showsChartDatum(s, f)
       ? 'Heights above the lowest tide (chart datum, LAT), like a tide table. '
       : 'Heights from mean sea level — lows read below zero until the lowest tide here is worked out (needs a connection, once). ') +
-      'Modelled tides, worked out from Open-Meteo data (CC BY 4.0, E.U. Copernicus Marine Service). Not an official tide table. Not for navigation.'));
+      'Modelled tides, worked out from Open-Meteo data (CC BY 4.0, E.U. Copernicus Marine Service). Not an official tide table.'));
     const handle = showPanel('Tides', content, { onDismiss: () => { if (main === handle) main = null; } });
     main = handle;
   }

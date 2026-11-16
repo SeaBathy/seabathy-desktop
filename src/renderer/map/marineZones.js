@@ -13,7 +13,7 @@ export const ZONES_CREDIT = 'Marine park zones: DCCEEW, GBRMPA, Queensland Gover
 export const NAMES_CREDIT = 'Names: Geoscience Australia gazetteer, GBRMPA (CC BY 4.0)';
 export const RAMPS_CREDIT = 'Boat ramps: © OpenStreetMap contributors';
 export const NOT_OFFICIAL = 'A guide only, from government data that can lag behind changes. The official zoning map and rules '
-  + 'for the park are the law: check them before you fish. Not for navigation.';
+  + 'for the park are the law: check them before you fish.';
 
 export const ZoneMode = { OFF: 'OFF', NO_TAKE: 'NO_TAKE', ALL: 'ALL' };
 export const ZONE_MODE_LABELS = { OFF: 'Off', NO_TAKE: 'No-take zones only', ALL: 'All zones' };

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **One agreement instead of notices everywhere:** on first launch you agree once that SeaBathy is
+  not for navigation (also under Settings → Safety and terms, and at seabathy.com/terms). "Not for
+  navigation" now always leads the credits line on the chart, and the repeated notices and extra
+  tick boxes on the buoys layer and zones are gone.
 - **Zone, ramp and name details open again:** clicking one on the chart did nothing (an error
   stopped the popup); it now shows the details.
 - **Marine park zones rebuilt** from each authority's own zoning (Australian Marine Parks,

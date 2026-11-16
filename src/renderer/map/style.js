@@ -161,7 +161,8 @@ export class StyleCoordinator {
 
   /** Recomputes the credit line from the basemap and visible overlays. */
   refreshAttribution() {
-    const credits = [this.baseAttribution(), ...this.callbacks.overlayCredits(), ...this.callbacks.extraCredits()].filter(Boolean);
+    // 'Not for navigation' always leads the credits line: the agreement's short form, never out of sight.
+    const credits = ['Not for navigation', this.baseAttribution(), ...this.callbacks.overlayCredits(), ...this.callbacks.extraCredits()].filter(Boolean);
     this.callbacks.onAttribution([...new Set(credits)].join(' • '));
   }
 }

@@ -1175,7 +1175,7 @@ export function create(app) {
       refreshDialog();
     }));
     if (status) content.append(caption(status, 2));
-    content.append(caption("Forecast model points are about 8 km apart, so it's less accurate close to shore and in channels. Not for navigation.", 8));
+    content.append(caption("Forecast model points are about 8 km apart, so it's less accurate close to shore and in channels.", 8));
   }
 
   // Temperature lines, target band and eddy outlines -------------------------------

@@ -17,6 +17,7 @@ import { rasterQuality } from './settings/presets.js';
 import { features } from './features.js';
 import { Graticule } from './map/graticule.js';
 import { NavMarks, confirmNotForNavigation, NAV_MARKS_CREDIT } from './map/navMarks.js';
+import * as safetyTerms from './ui/safetyTerms.js';
 import { MarineZones, ZoneMode, NOT_OFFICIAL } from './map/marineZones.js';
 
 const $ = (id) => document.getElementById(id);
@@ -586,6 +587,7 @@ function openSettings() {
 
 async function init() {
   await loadPrefs();
+  safetyTerms.showIfNeeded();
   setSystemCountry(await api.countryCode());
   log('App', 'renderer start');
   app.visual = loadVisual();
@@ -716,12 +718,11 @@ init().catch((error) => {
 
 const refreshCredits = () => app.style?.refreshAttribution();
 
-/** The first time zones are turned on: they're a guide, the official map is the law. */
+/** Turning zones on: no separate notice, the first-launch agreement covers it. */
 function confirmZones(done) {
-  confirm('Marine park zones', `${NOT_OFFICIAL}\n\nGreen: no-take (no fishing). Yellow: limited fishing. Blue: fishing under the usual rules. Click a zone for details.`, () => {
-    app.zones.acknowledge();
-    done();
-  }, { confirmLabel: 'I understand', destructive: false });
+  // The first-launch agreement (ui/safetyTerms.js) already covers zones.
+  app.zones.acknowledge();
+  done();
 }
 
 /** One click to switch the zones, names and ramps, above the basemap choice in the side panel. */
