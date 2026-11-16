@@ -116,9 +116,26 @@ margin. Save, reverse, rename, and export as GPX. `Backspace` takes back the las
 <summary><b>Waypoints and GPX</b></summary>
 
 Click the **Waypoint tool**, then click the chart where the mark goes, and give it a name, icon,
-colour and notes. **☰ → Settings → Import GPX** reads waypoints and routes from a chartplotter,
+colour and notes. **☰ → Settings → Import GPX, KML or KMZ** reads waypoints and routes from a chartplotter, Google Earth,
 the phone app or another program; **Export waypoints and route** saves yours as GPX for the phone
 or plotter.
+</details>
+
+<details>
+<summary><b>Marine park zones, reef names and boat ramps</b></summary>
+
+Use the **Zones**, **Names** and **Ramps** switches at the top of the side panel (or Settings).
+Zones cover every Australian marine park: no-take in green, limited fishing in yellow, general
+use in blue; show all or only the no-take ones, and click a zone for what's allowed. A guide
+only: the official zoning map is the law.
+</details>
+
+<details>
+<summary><b>Backup and restore</b></summary>
+
+**Settings** → **Backup and restore** saves your waypoints, routes, tracks and settings in one
+file, the same format as the phone app's. Turn on the daily backup and pick a folder (a OneDrive
+or Google Drive folder works) to keep the newest five there.
 </details>
 
 <details>

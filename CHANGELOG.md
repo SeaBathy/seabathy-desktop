@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Save any online map offline:** "Save this area offline" now works with every online map;
+  what you save, and keeping to each provider's terms, is up to you.
+- **Licence:** SeaBathy Desktop is now under the GNU GPL-3.0: free to use, change and share, and
+  any shared copy or changed version must stay free and open source.
 - **Marine park zones** for every Australian marine park, Commonwealth and state: no-take zones in
   green, limited fishing in yellow, general use in blue. Show all zones or only the no-take ones,
   and click a zone for its park and what's allowed. A guide only: the official zoning map is the law.
