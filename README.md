@@ -7,7 +7,7 @@ Your depth maps in 3D, tides, sea conditions and route planning, for Windows. Wo
   <img alt="Version 1.1.1" src="https://img.shields.io/badge/version-1.1.1-0f766e">
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4?logo=windows&logoColor=white">
   <img alt="Portable, no install" src="https://img.shields.io/badge/install-none%20(portable)-success">
-  <img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-blue">
+  <img alt="GPL-3.0 licence" src="https://img.shields.io/badge/licence-GPL--3.0-blue">
   <img alt="Not for navigation" src="https://img.shields.io/badge/not%20for-navigation-critical">
 </p>
 
@@ -202,7 +202,7 @@ project.
 
 ## Credits and licence
 
-- **Code:** MIT licence, see [LICENSE](LICENSE).
+- **Code:** GNU GPL-3.0, see [LICENSE](LICENSE): free to use, change and share; anyone who shares a copy or a changed version must keep it free and open source under the same licence.
 - **Libraries:** [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Full licence texts are in the app under Settings → Licences and credits.
 - **Maps and data:** each map's credit is shown on screen while it's shown. Every source, its credit and its terms: [DATA_ATTRIBUTION.md](DATA_ATTRIBUTION.md).
 - **Building from source and testing:** [DEVELOPMENT.md](DEVELOPMENT.md).

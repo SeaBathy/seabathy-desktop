@@ -10,7 +10,7 @@
   },
   "author": "SeaBathy",
   "main": "src/main.js",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "scripts": {
     "build": "node build.mjs",
     "start": "node build.mjs && electron .",

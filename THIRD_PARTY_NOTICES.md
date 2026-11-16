@@ -1,6 +1,6 @@
 # Third-party software
 
-SeaBathy Desktop's own code is under the MIT licence in [`LICENSE`](LICENSE).
+SeaBathy Desktop's own code is under the GNU GPL-3.0 in [`LICENSE`](LICENSE).
 The app is built with, and ships, the open-source software below under its own
 licences. Their full licence texts ship inside the app (Settings > Licences and
 credits; in the source, `src/renderer/licenses.txt`). Map and data services are
