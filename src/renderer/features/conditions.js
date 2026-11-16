@@ -14,6 +14,7 @@ import { ConditionsStore } from '../conditions/store.js';
 import { ColourChoice, COLOUR_CHOICES, ArrowChoice, resolveArrow, DirectionStyle, DIRECTION_STYLES, ColourScale, renderPicture } from '../conditions/picture.js';
 import { FlowLines } from '../conditions/flowLines.js';
 import * as Contours from '../conditions/contours.js';
+import { addImageResolver } from '../map/imageResolver.js';
 import { astroDay } from '../conditions/astro.js';
 import { OVERLAY_ANCHOR } from '../map/style.js';
 
@@ -1329,8 +1330,10 @@ export function create(app) {
     try {
       if (!labelListener) {
         labelListener = true;
-        map.on('styleimagemissing', (e) => {
-          if (e.id?.startsWith(LABEL_IMAGE) && !map.hasImage(e.id)) labelImage(e.id);
+        addImageResolver(map, (id) => {
+          if (!id?.startsWith(LABEL_IMAGE)) return false;
+          labelImage(id);
+          return true;
         });
       }
       if (!map.getSource(CONTOUR_SOURCE)) map.addSource(CONTOUR_SOURCE, { type: 'geojson', data: EMPTY });

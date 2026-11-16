@@ -4,7 +4,7 @@
 
 import * as maplibregl from 'maplibre-gl';
 import { api, prefs, loadPrefs, toast, log, logError, isOnline } from './core.js';
-import { el, dismissAll, showPanel, body, caption } from './ui/panels.js';
+import { el, dismissAll, showPanel, body, caption, confirm } from './ui/panels.js';
 import { icon, svg } from './ui/icons.js';
 import { StyleCoordinator, BasemapType } from './map/style.js';
 import { OverlayLayers } from './map/overlays.js';
@@ -17,6 +17,7 @@ import { rasterQuality } from './settings/presets.js';
 import { features } from './features.js';
 import { Graticule } from './map/graticule.js';
 import { NavMarks, confirmNotForNavigation, NAV_MARKS_CREDIT } from './map/navMarks.js';
+import { MarineZones, ZoneMode, NOT_OFFICIAL } from './map/marineZones.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -145,7 +146,9 @@ function showLayer(layer) {
 
 function installAppLayers() {
   const map = app.map;
+  app.zones.installAreas();
   app.navMarks.install();
+  app.zones.installPoints();
   app.graticule.install();
   map.addSource('measure', { type: 'geojson', data: EMPTY });
   map.addLayer({ id: 'measure-casing', type: 'line', source: 'measure', filter: ['==', '$type', 'LineString'], paint: { 'line-color': CASING, 'line-width': 6 } });
@@ -249,6 +252,7 @@ function handleMapClick(lat, lng) {
       break;
     default:
       if (app.navMarks?.click(lat, lng)) break;
+      if (app.zones?.click(lat, lng)) break;
       features.onMapClick?.(lat, lng);
   }
 }
@@ -555,6 +559,9 @@ function openSettings() {
       prefs.put('show_grid', on);
       app.graticule.setVisible(on);
     },
+    zones: () => app.zones,
+    onZonesChanged: () => { refreshCredits(); refreshQuickZones(); },
+    confirmZones,
     showNavMarks: () => app.navMarks.visible,
     onShowNavMarksChanged: (on, done) => {
       const apply = (value) => {
@@ -600,6 +607,7 @@ async function init() {
   app.graticule = new Graticule(map);
   app.graticule.visible = prefs.getBoolean('show_grid', false);
   app.navMarks = new NavMarks(map);
+  app.zones = new MarineZones(map);
   // Always starts off: turning it on asks for the not-for-navigation tick again.
 
   app.overlays = new OverlayLayers(map, {
@@ -625,8 +633,9 @@ async function init() {
       $('credits').hidden = !text;
     },
     overlayCredits: () => app.overlays.visibleAttributions(),
-    extraCredits: () => [...features.credits(), ...(app.navMarks?.visible ? [NAV_MARKS_CREDIT] : [])]
+    extraCredits: () => [...features.credits(), ...(app.navMarks?.visible ? [NAV_MARKS_CREDIT] : []), ...(app.zones?.credits() || [])]
   });
+  addQuickZones();
   app.layerPanel = new LayerPanel($('layers-list'), app.overlays, {
     onEditDepthColours: (layer) => features.depthColours?.show(layer),
     onOpen3d: (layer) => features.terrain?.open(layer),
@@ -702,3 +711,56 @@ init().catch((error) => {
   logError('App', 'start FAILED', error);
   showAlert(`SeaBathy couldn't start: ${error.message}`);
 });
+
+// ------------------------------------------------------------------ marine park zones
+
+const refreshCredits = () => app.style?.refreshAttribution();
+
+/** The first time zones are turned on: they're a guide, the official map is the law. */
+function confirmZones(done) {
+  confirm('Marine park zones', `${NOT_OFFICIAL}\n\nGreen: no-take (no fishing). Yellow: limited fishing. Blue: fishing under the usual rules. Click a zone for details.`, () => {
+    app.zones.acknowledge();
+    done();
+  }, { confirmLabel: 'I understand', destructive: false });
+}
+
+/** One click to switch the zones, names and ramps, above the basemap choice in the side panel. */
+function addQuickZones() {
+  const select = $('basemap');
+  if (!select || $('quick-zones')) return;
+  const header = document.createElement('div');
+  header.className = 'side-section';
+  header.textContent = 'On the chart';
+  const row = document.createElement('div');
+  row.id = 'quick-zones';
+  row.style.cssText = 'display:flex;gap:6px;margin:0 0 12px 0;';
+  const section = select.previousElementSibling;
+  select.parentElement.insertBefore(header, section);
+  select.parentElement.insertBefore(row, section);
+  refreshQuickZones();
+}
+
+function refreshQuickZones() {
+  const row = $('quick-zones');
+  if (!row || !app.zones) return;
+  row.replaceChildren();
+  const chip = (label, on, title, click) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.title = title;
+    b.style.cssText = `flex:1;padding:7px 4px;border-radius:14px;border:0;cursor:pointer;font:inherit;font-size:12px;`
+      + (on ? 'background:#2DD4BF;color:#0B1622;' : 'background:#29313A;color:#E2E8F0;');
+    b.addEventListener('click', click);
+    row.append(b);
+  };
+  const z = app.zones;
+  const label = { OFF: 'Zones off', NO_TAKE: 'No-take', ALL: 'All zones' }[z.mode];
+  chip(label, z.mode !== ZoneMode.OFF, 'Marine park zones: click to change', () => {
+    const order = [ZoneMode.OFF, ZoneMode.NO_TAKE, ZoneMode.ALL];
+    const next = order[(order.indexOf(z.mode) + 1) % order.length];
+    const set = () => { z.setMode(next); refreshCredits(); refreshQuickZones(); };
+    if (next !== ZoneMode.OFF && !z.acknowledged) confirmZones(set); else set();
+  });
+  chip('Names', z.names, 'Reef and island names', () => { z.setNames(!z.names); refreshCredits(); refreshQuickZones(); });
+  chip('Ramps', z.ramps, 'Boat ramps', () => { z.setRamps(!z.ramps); refreshCredits(); refreshQuickZones(); });
+}

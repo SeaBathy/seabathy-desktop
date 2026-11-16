@@ -70,6 +70,24 @@ export function showSettings(c) {
   const navMarks = addRow(content, row('Buoys, beacons, pipelines (beta)', '', choice('Buoys, beacons, pipelines (beta)', ['Off', 'On'],
     () => (c.showNavMarks() ? 1 : 0), (i) => c.onShowNavMarksChanged(i === 1, () => refresh()))));
 
+  const zones = c.zones?.();
+  if (zones) {
+    const MODES = ['OFF', 'NO_TAKE', 'ALL'];
+    const LABELS = ['Off', 'No-take zones only', 'All zones'];
+    addRow(content, row('Marine park zones', LABELS[MODES.indexOf(zones.mode)] + (zones.mode === 'OFF' ? ': no-take zones in green' : ''), () => {
+      showChoicePanel('Marine park zones', LABELS, MODES.indexOf(zones.mode), (i) => {
+        const set = () => { zones.setMode(MODES[i]); c.onZonesChanged(); closeSettings(); };
+        if (MODES[i] !== 'OFF' && !zones.acknowledged) c.confirmZones(set); else set();
+      });
+    }));
+    addRow(content, row('Reef and island names', zones.names ? 'On' : 'Off: named reefs, islands, shoals and banks', () => {
+      zones.setNames(!zones.names); c.onZonesChanged(); closeSettings();
+    }));
+    addRow(content, row('Boat ramps', zones.ramps ? 'On' : 'Off', () => {
+      zones.setRamps(!zones.ramps); c.onZonesChanged(); closeSettings();
+    }));
+  }
+
   content.append(sectionHeader('MAP LAYERS'));
   addRow(content, row('Get seabed depths for this area', 'Free depth data, anywhere in the world', () => { closeSettings(); c.onGetSeabed(); }));
   addRow(content, row('Load MBTiles file', 'Charts and map packs (.mbtiles)', c.onLoadMbtiles));

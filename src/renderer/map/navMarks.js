@@ -4,6 +4,7 @@
 // testing/navmarks in the dev folder.
 
 import * as maplibregl from 'maplibre-gl';
+import { addImageResolver } from './imageResolver.js';
 import MARKS from '../data/navmarks.geojson';
 import LINES from '../data/navlines.geojson';
 
@@ -104,11 +105,12 @@ export class NavMarks {
     this.map = map;
     this.visible = false;
     this.popup = null;
-    map.on('styleimagemissing', (e) => {
-      if (!e.id.includes('|') || map.hasImage(e.id)) return;
-      const [cat, struct] = e.id.split('|');
+    addImageResolver(map, (id) => {
+      if (!id?.includes('|') || id.startsWith('txt:')) return false;
+      const [cat, struct] = id.split('|');
       const cv = drawIcon(cat, struct);
-      map.addImage(e.id, cv.getContext('2d').getImageData(0, 0, cv.width, cv.height), { pixelRatio: 2 });
+      map.addImage(id, cv.getContext('2d').getImageData(0, 0, cv.width, cv.height), { pixelRatio: 2 });
+      return true;
     });
   }
 

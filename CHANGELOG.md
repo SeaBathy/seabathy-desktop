@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Marine park zones** for every Australian marine park, Commonwealth and state: no-take zones in
+  green, limited fishing in yellow, general use in blue. Show all zones or only the no-take ones,
+  and click a zone for its park and what's allowed. A guide only: the official zoning map is the law.
+- **Reef and island names**: named reefs, islands, shoals, banks and rocks around Australia, and
+  Great Barrier Reef reef numbers close in.
+- **Boat ramps** from OpenStreetMap.
+- Quick switches for zones, names and ramps at the top of the layers panel.
 - **Backup and restore** (Settings → Backup and restore): one file with your waypoints, routes,
   tracks and settings, in the same format as the phone app. A daily backup can go to any folder
   (a OneDrive or Google Drive folder works), keeping the newest five. A phone backup restored here
