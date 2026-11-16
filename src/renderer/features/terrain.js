@@ -26,23 +26,11 @@ const DEFAULT_DRAPES = [
   { id: 'sentinel2', label: 'Sentinel-2 satellite (saves offline)', colour: '#0e7490', group: 'default',
     tiles: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg', maxzoom: 14, attribution: SENTINEL2_CREDIT }
 ];
-// Tile hosts whose terms don't allow bulk or offline copies (see DATA_ATTRIBUTION.md):
-// "Save this area offline" isn't offered for them.
-const VIEW_ONLY_HOSTS = ['arcgisonline.com', 'arcgis.com', 'openstreetmap.org', 'opentopomap.org'];
-
-/** Whether a tile link's provider allows offline copies. */
-export function allowsOfflineCopies(tiles) {
-  let host = '';
-  try {
-    host = new URL(String(tiles).replace(/[{}]/g, '')).hostname.toLowerCase();
-  } catch {
-    return false;
-  }
-  return !VIEW_ONLY_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
-}
-
-/** Whether "Save this area offline" is offered for a Map list entry. */
-const isSavable = (d) => Boolean(d && d.tiles && !d.offline && allowsOfflineCopies(d.tiles));
+/**
+ * Whether "Save this area offline" is offered for a Map list entry: any online map. What is
+ * saved, and from where, is the user's choice; following each provider's terms is up to them.
+ */
+const isSavable = (d) => Boolean(d && d.tiles && !d.offline);
 const DEPTH_CHOICE = { id: 'depth', label: 'Depth colours', sub: 'The survey coloured by depth, no map', swatch: '◐', colour: '#0e7490', group: 'default' };
 const DRAPE_GROUPS = [['default', 'DEFAULT'], ['layer', 'YOUR LAYERS'], ['custom', 'CUSTOM']];
 const CUSTOM_KEY = 'terrain_custom_drapes';

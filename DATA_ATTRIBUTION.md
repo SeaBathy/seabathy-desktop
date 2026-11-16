@@ -33,13 +33,12 @@ on the chart and in the 3D view.
 
 Esri's maps (World Imagery and others) are not built in: their terms expect an ArcGIS account
 for use in apps. You can add any of them yourself as a map link, under your own terms with Esri;
-the app then shows "Powered by Esri" with it and won't save it offline.
+the app then shows "Powered by Esri" with it.
 
 The apps' built-in satellite map and offline download source is Sentinel-2
-cloudless, whose licence allows both. In the 3D view, "Save this area offline"
-is offered for Sentinel-2 and other maps that allow it, but not for Esri,
-OpenStreetMap or OpenTopoMap, whose terms don't allow offline copies: those
-can be looked at online only. For a map or link you add yourself, the
+cloudless, whose licence allows both. "Save this area offline" (also in the
+3D view) works with any online map, including ones whose terms don't allow
+offline copies: whether to save one is the user's choice. For a map or link you add yourself, the
 offline downloader will download from whatever you choose:
 **the choice is yours, and so is checking whether a provider's terms allow it**.
 SeaBathy is a tool: what you download with it, and from where, is up to you. The
