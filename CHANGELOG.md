@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Offline saving follows each map's rules:** OpenStreetMap's own tile server and OpenTopoMap
+  don't allow saving areas for offline use, and block apps that do, so SeaBathy Desktop no longer
+  offers it for those two. Every other map can still be saved.
+
 ## 1.1.3 — 2026-11-16
 
 - **The app starts again:** the 1.1.2 download was missing a file and stopped with an error

@@ -9,6 +9,19 @@ import { el, body, sectionHeader, caption, addRow, button, input, showPanel, con
 import { XYZ_PRESETS, xyzValidationError } from '../settings/presets.js';
 import { BasemapType } from '../map/style.js';
 
+// Tile servers whose rules forbid saving areas for offline use, and block apps that do:
+// OpenStreetMap's own server (operations.osmfoundation.org/policies/tiles) and OpenTopoMap's
+// volunteer server. Kept in step with the phone app's OfflineTileDownloadController.
+const NO_OFFLINE_HOSTS = ['tile.openstreetmap.org', 'opentopomap.org'];
+
+/** Why [urlTemplate] can't be saved offline, or null when it can. */
+export function noOfflineReason(urlTemplate) {
+  let host;
+  try { host = new URL(String(urlTemplate).replace(/[{}]/g, '')).hostname.toLowerCase(); } catch { return null; }
+  if (!NO_OFFLINE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))) return null;
+  return "This map's tile server doesn't allow saving areas for offline use, and blocks apps that do. Pick another map to save, or view this one online.";
+}
+
 const CATEGORY_LABELS = { SATELLITE: 'Satellite imagery', TOPOGRAPHIC: 'Topographic', STREET: 'Street map', NAUTICAL: 'Nautical' };
 const SATELLITE_DEFAULT_OPACITY = 0.7;
 const DEFAULT_MIN_ZOOM = 10;
@@ -254,6 +267,8 @@ export function create(app) {
    * [maxZoom] allows while staying a sensible size.
    */
   async function beginDownload(source, { bounds = viewportBounds(), maxZoom = null, areaNote = null } = {}) {
+    const refused = noOfflineReason(source.urlTemplate);
+    if (refused) { toast(refused); return; }
     let deepest = DEFAULT_MAX_ZOOM;
     if (maxZoom !== null) {
       deepest = Math.max(DEFAULT_MIN_ZOOM, maxZoom);
