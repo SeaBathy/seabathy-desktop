@@ -41,7 +41,7 @@ export function seabedArea(south, west, north, east, centreLat, centreLng) {
   };
 }
 
-/** "Seabed 18.05S 146.55E (0.30°)": the same area gets the same file. */
+/** "Seabed 20.15S 148.95E (0.30°)": the same area gets the same file. */
 export function seabedName(area) {
   const lat = (area.south + area.north) / 2;
   const lng = (area.west + area.east) / 2;
