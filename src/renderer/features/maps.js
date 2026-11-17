@@ -90,7 +90,7 @@ export function create(app) {
       }));
     }
     content.append(sectionHeader('YOUR OWN TILE LINK'));
-    content.append(caption("A link with {z}, {x} and {y} in it. Check the provider's licence allows this.", 0));
+    content.append(caption("A link with {z}, {x} and {y} in it (with your own key, if the service gives you one). Check the provider's licence allows this.", 0));
     content.append(caption('Tile URL template', 10));
     const url = input({ value: app.style.customUrl, placeholder: 'https://example.com/tiles/{z}/{x}/{y}.png', multiline: true });
     url.rows = 2;
@@ -153,7 +153,7 @@ export function create(app) {
     content.append(caption('Its credit is shown on the map for you.', 0));
     for (const preset of XYZ_PRESETS) addRow(content, presetRow(preset, 'USE', () => use(preset.urlTemplate, preset.attribution)));
     content.append(sectionHeader('YOUR OWN TILE LINK'));
-    content.append(caption("A link with {z}, {x} and {y} in it. Check the provider's licence allows this.", 0));
+    content.append(caption("A link with {z}, {x} and {y} in it (with your own key, if the service gives you one). Check the provider's licence allows this.", 0));
     content.append(caption('Tile URL template', 10));
     const url = input({ placeholder: 'https://example.com/tiles/{z}/{x}/{y}.png', multiline: true });
     url.rows = 2;
@@ -219,7 +219,7 @@ export function create(app) {
         content.append(card);
       }
       content.append(sectionHeader('ADD A SOURCE'));
-      content.append(caption('A map or satellite tile link with {z}, {x} and {y} in it. Check its licence allows saving tiles offline.', 0));
+      content.append(caption("A map or satellite tile link with {z}, {x} and {y} in it. You're responsible for having the right to save this map offline: check its licence.", 0));
       const name = input({ placeholder: 'Source name' });
       const url = input({ placeholder: 'https://example.com/{z}/{x}/{y}.png' });
       const attribution = input({ placeholder: 'Credit shown on the map (optional)' });
@@ -280,6 +280,7 @@ export function create(app) {
     content.append(caption(`${areaNote || 'The area on screen. To change it, close this, move the map and open it again.'}\n\n${source.name}\n` +
       `West ${bounds.west.toFixed(4)}   East ${bounds.east.toFixed(4)}\nSouth ${bounds.south.toFixed(4)}   North ${bounds.north.toFixed(4)}`, 0));
     content.append(sectionHeader('ZOOM RANGE'));
+    content.append(caption("You're responsible for having the right to save this map offline: check its licence.", 8));
     content.append(caption('A higher max zoom has more detail, but many more tiles.', 0));
     const minZoom = input({ value: String(DEFAULT_MIN_ZOOM), placeholder: 'Min zoom', type: 'number' });
     const maxZoomInput = input({ value: String(deepest), placeholder: 'Max zoom', type: 'number' });
@@ -324,8 +325,13 @@ export function create(app) {
       assess.textContent = 'Assessing…';
       status.className = 'pd-status';
       status.textContent = 'Checking a few tiles…';
-      const sizes = await api.sampleTiles(source.urlTemplate, bounds, range[0], range[1]);
+      const { sizes, refusal } = await api.sampleTiles(source.urlTemplate, bounds, range[0], range[1]);
       assess.disabled = false;
+      if (refusal) {
+        assess.textContent = 'Assess';
+        status.textContent = refusal;
+        return;
+      }
       // The fields changed while sampling: this estimate is for a range no longer shown.
       if (!same(readRange(), range)) {
         assess.textContent = 'Assess';

@@ -178,7 +178,7 @@ async function httpGet(url, { userAgent = USER_AGENT, binary = false, timeoutMs 
   try {
     const response = await net.fetch(url, { headers: { 'User-Agent': userAgent }, signal: controller.signal });
     const body = binary ? Buffer.from(await response.arrayBuffer()) : await response.text();
-    return { ok: response.ok, status: response.status, body };
+    return { ok: response.ok, status: response.status, body, retryAfter: response.headers.get('retry-after') };
   } catch (error) {
     const offline = !net.isOnline();
     return { ok: false, status: 0, error: offline ? 'offline' : controller.signal.aborted ? 'timeout' : String(error.message || error) };
@@ -308,15 +308,70 @@ function tileUrl(template, z, x, y) {
   return template.replace('{z}', z).replace('{x}', x).replace('{y}', y);
 }
 
-const RETRYABLE = new Set([429, 500, 502, 503, 504]);
+const RETRYABLE = new Set([500, 502, 504]);
 const MAX_TILE_BYTES = 8 * 1024 * 1024;
 
-/** One tile, tried up to 3 times (300 ms, 600 ms apart) when the failure may pass; null if it never came. */
-async function fetchTile(url, shouldStop) {
+// Polite downloading, as on the phone: a steady pace (about 20 tiles a second), a pause whenever
+// the server says "slow down" (429/503, for as long as its Retry-After asks), and a stop when it
+// keeps refusing.
+const BASE_GAP_MS = 50;
+const MAX_GAP_MS = 1000;
+const MIN_PAUSE_MS = 2000;
+const MAX_PAUSE_MS = 120000;
+const CALM_STEP = 100;
+const GIVE_UP_AFTER = 8;
+const BLOCKED = "This map's server is refusing downloads: it may block apps, or need your own key. Nothing was saved.";
+const RATE_LIMITED = "This map's server kept asking SeaBathy to slow down, so the download stopped. Nothing was saved.";
+const TRY_A_KEY = 'For offline maps, try a map service that gives you your own free key, then add its tile link ' +
+  '(with your key in it) under Settings → Online map layers → Your own tile link.';
+
+/** One download's (or size check's) pace and the server's answers so far. */
+function makePacer() {
+  return { nextStartAt: 0, pausedUntil: 0, gapMs: BASE_GAP_MS, refusalsInARow: 0, throttlesInARow: 0, calm: 0, refusal: null };
+}
+
+/** Waits for this request's turn: the pace, and any pause the server asked for. */
+async function waitTurn(pacer) {
+  const now = Date.now();
+  const start = Math.max(now, pacer.nextStartAt, pacer.pausedUntil);
+  pacer.nextStartAt = start + pacer.gapMs;
+  if (start > now) await new Promise((r) => setTimeout(r, start - now));
+}
+
+/**
+ * One tile, tried up to 3 times when the failure may pass; null if it never came. Keeps to
+ * [pacer]'s pace, obeys "slow down", and gives up for good once the server keeps refusing.
+ */
+async function fetchTile(url, shouldStop, pacer = makePacer()) {
   for (let attempt = 1; attempt <= 3; attempt++) {
-    if (shouldStop()) return null;
+    if (shouldStop() || pacer.refusal) return null;
+    await waitTurn(pacer);
+    if (shouldStop() || pacer.refusal) return null;
     const result = await httpGet(url, { binary: true, timeoutMs: 20000 });
-    if (result.ok) return result.body.length > MAX_TILE_BYTES ? null : result.body;
+    if (result.ok) {
+      pacer.refusalsInARow = 0;
+      pacer.throttlesInARow = 0;
+      if (pacer.gapMs > BASE_GAP_MS && ++pacer.calm >= CALM_STEP) {
+        pacer.calm = 0;
+        pacer.gapMs = Math.max(BASE_GAP_MS, Math.round(pacer.gapMs * 0.8));
+      }
+      return result.body.length > MAX_TILE_BYTES ? null : result.body;
+    }
+    if (result.status === 429 || result.status === 503) {
+      pacer.throttlesInARow++;
+      pacer.calm = 0;
+      const asked = Number.parseInt(result.retryAfter, 10);
+      const pause = Math.min(MAX_PAUSE_MS, Math.max(MIN_PAUSE_MS, Number.isFinite(asked) ? asked * 1000 : 1000 * 2 ** Math.min(6, pacer.throttlesInARow)));
+      pacer.pausedUntil = Math.max(pacer.pausedUntil, Date.now() + pause);
+      pacer.gapMs = Math.min(MAX_GAP_MS, pacer.gapMs * 2);
+      log('OfflineTileDownload', `server asked to slow down: pausing ${Math.round(pause / 1000)} s`);
+      if (pacer.throttlesInARow >= GIVE_UP_AFTER) pacer.refusal = RATE_LIMITED;
+      continue;
+    }
+    if (result.status === 401 || result.status === 403) {
+      if (++pacer.refusalsInARow >= GIVE_UP_AFTER) pacer.refusal = BLOCKED;
+      return null;
+    }
     if (result.status && !RETRYABLE.has(result.status)) return null;
     if (attempt < 3 && !shouldStop()) await new Promise((r) => setTimeout(r, 300 * attempt));
   }
@@ -381,6 +436,7 @@ let download = null; // { cancelled }
 
 async function runDownload(win, { source, bounds, minZoom, maxZoom }) {
   const job = { cancelled: false };
+  const pacer = makePacer();
   download = job;
   const send = (channel, data) => { if (!win.isDestroyed()) win.webContents.send(channel, data); };
   const dir = downloadsDir();
@@ -417,7 +473,7 @@ async function runDownload(win, { source, bounds, minZoom, maxZoom }) {
         while (next < batch.length && !job.cancelled) {
           const i = next++;
           const [z, x, y] = batch[i];
-          results[i] = await fetchTile(tileUrl(source.urlTemplate, z, x, y), () => job.cancelled);
+          results[i] = await fetchTile(tileUrl(source.urlTemplate, z, x, y), () => job.cancelled, pacer);
         }
       }));
       return results;
@@ -425,6 +481,8 @@ async function runDownload(win, { source, bounds, minZoom, maxZoom }) {
 
     let lastSent = 0;
     for (let i = 0; i < tiles.length && !job.cancelled; i += 200) {
+      // The server refused (blocked, or kept saying slow down): stop, don't keep knocking.
+      if (pacer.refusal) throw new Error(`${pacer.refusal} ${TRY_A_KEY}`);
       const batch = tiles.slice(i, i + 200);
       const data = await fetchBatch(batch);
       const rows = [];
@@ -468,6 +526,7 @@ async function runDownload(win, { source, bounds, minZoom, maxZoom }) {
     db.close();
     db = null;
     if (job.cancelled) throw new Error('cancelled');
+    if (pacer.refusal) throw new Error(`${pacer.refusal} ${TRY_A_KEY}`);
     if (succeeded === 0) throw new Error(`None of the ${total} tiles in this area could be downloaded`);
     fs.renameSync(partial, destination);
     fs.rmSync(`${partial}-journal`, { force: true });
@@ -674,11 +733,12 @@ app.whenReady().then(() => {
   ipcMain.handle('download:count', (_e, bounds, minZoom, maxZoom) => tileCount(bounds, minZoom, maxZoom));
   ipcMain.handle('download:sample', async (_e, template, bounds, minZoom, maxZoom) => {
     const sizes = [];
+    const pacer = makePacer();
     for (const [z, x, y] of samplePicks(bounds, minZoom, maxZoom)) {
-      const data = await fetchTile(tileUrl(template, z, x, y), () => false);
+      const data = await fetchTile(tileUrl(template, z, x, y), () => false, pacer);
       if (data) sizes.push(data.length);
     }
-    return sizes;
+    return { sizes, refusal: pacer.refusal ? `${pacer.refusal} ${TRY_A_KEY}` : null };
   });
   ipcMain.handle('download:start', (event, job) => {
     if (download) return false;
