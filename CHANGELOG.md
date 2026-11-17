@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.5 — 2026-11-17
 
 - **Tides anywhere, even inland:** a spot more than about 25 km from the sea used to give "No tides
   here". It now finds the nearest coast with tides (up to about 260 km away).
