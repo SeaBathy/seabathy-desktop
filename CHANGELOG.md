@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Tides anywhere, even inland:** a spot more than about 25 km from the sea used to give "No tides
+  here". It now finds the nearest coast with tides (up to about 260 km away).
+- **Sea conditions:** a spot moved out of its downloaded area gets the new area straight away.
+
 ## 1.1.4 — 2026-11-17
 
 - **Offline saving follows each map's rules:** OpenStreetMap's own tile server and OpenTopoMap

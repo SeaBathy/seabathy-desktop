@@ -923,7 +923,6 @@ export function create(app) {
   async function keepSpotUpdated(force = false) {
     if (!keepUpdated() || downloading) return;
     const now = Date.now();
-    if (!force && now - lastAutoAttempt < AUTO_RETRY_MS) return;
     const centre = (x) => [(x.south + x.north) / 2, (x.west + x.east) / 2];
     const position = fixedSpot || (spotArea && centre(spotArea)) || (area && centre(area));
     if (!position) {
@@ -932,6 +931,10 @@ export function create(app) {
     }
     const [lat, lng] = position;
     const saved = spotArea;
+    // The pause between tries is for retrying; a spot that has left its area gets the new one
+    // straight away (still no more than one download every MIN_DOWNLOAD_GAP_MS).
+    const leftArea = saved && !saved.middleContains(lat, lng);
+    if (!force && !leftArea && now - lastAutoAttempt < AUTO_RETRY_MS) return;
     const fresh = saved && !needsUpdate(saved.fetchedMillis, latestRun, now) && saved.middleContains(lat, lng);
     if (fresh) return;
     if (!(await online())) {

@@ -104,8 +104,73 @@ function parseHourly(root) {
     t.push(hourly.time[i] * 1000);
     h.push(v);
   }
-  if (t.length < 6) throw new Error('No tides here — too far from the sea. Pick a spot on the water.');
+  if (t.length < 6) throw new TooFarFromSea();
   return [t, h];
+}
+
+/** The marine model has no sea at the point asked for (it only looks in the grid cells next to it). */
+class TooFarFromSea extends Error {
+  constructor() { super('No tides here — too far from the sea. Pick a spot on the water.'); }
+}
+
+// Rings searched for the nearest tides from an inland spot, in km; two rings per request, 16 directions.
+const SEA_SEARCH_KM = [15, 30, 50, 75, 100, 140, 200, 260];
+const SEA_SEARCH_BEARINGS = 16;
+// Sea points found for inland spots, by spot rounded to about 5 km.
+const seaPoints = new Map();
+
+/**
+ * The nearest point with modelled tides: asks the model about rings of points round lat/lng,
+ * a few rings per request, and takes the closest that has tides. Null when there's none in
+ * range. Kept in step with the phone app's TideStore.nearestSea.
+ */
+async function nearestSea(lat, lng) {
+  const cacheKey = `${(Math.round(lat * 20) / 20).toFixed(2)},${(Math.round(lng * 20) / 20).toFixed(2)}`;
+  if (seaPoints.has(cacheKey)) return seaPoints.get(cacheKey);
+  for (let i = 0; i < SEA_SEARCH_KM.length; i += 2) {
+    const points = [];
+    for (const km of SEA_SEARCH_KM.slice(i, i + 2)) {
+      for (let b = 0; b < SEA_SEARCH_BEARINGS; b++) {
+        const bearing = (b * 2 * Math.PI) / SEA_SEARCH_BEARINGS;
+        const pLat = Math.max(-89, Math.min(89, lat + (km / 111.32) * Math.cos(bearing)));
+        const pLng = ((lng + (km / (111.32 * Math.max(0.05, Math.cos((lat * Math.PI) / 180)))) * Math.sin(bearing) + 540) % 360) - 180;
+        points.push([pLat, pLng]);
+      }
+    }
+    const url = 'https://marine-api.open-meteo.com/v1/marine?latitude=' + points.map((p) => p[0].toFixed(4)).join(',') +
+      '&longitude=' + points.map((p) => p[1].toFixed(4)).join(',') +
+      '&hourly=sea_level_height_msl&forecast_days=1&timeformat=unixtime&cell_selection=sea';
+    const reply = JSON.parse(await get(url, 'Tide service'));
+    const results = Array.isArray(reply) ? reply : [reply];
+    let best = null;
+    for (const r of results) {
+      const heights = r.hourly?.sea_level_height_msl || [];
+      if (heights.filter((v) => v !== null && v !== undefined).length < 6) continue;
+      const d = distanceM(lat, lng, r.latitude, r.longitude);
+      if (!best || d < best.d) best = { lat: r.latitude, lng: r.longitude, d };
+    }
+    if (best) {
+      const point = [best.lat, best.lng];
+      seaPoints.set(cacheKey, point);
+      return point;
+    }
+  }
+  return null;
+}
+
+/**
+ * Runs fetch(lat, lng); if that's too far inland for the model, runs it again at the nearest
+ * point that has tides, so following the GPS inland still gives the tides at the nearest coast.
+ */
+async function atSea(lat, lng, fetch) {
+  try {
+    return await fetch(lat, lng);
+  } catch (error) {
+    if (!(error instanceof TooFarFromSea)) throw error;
+    const point = await nearestSea(lat, lng);
+    if (!point) throw new Error(`No tides within about ${SEA_SEARCH_KM[SEA_SEARCH_KM.length - 1]} km of here. Pick a spot on the water.`);
+    return fetch(point[0], point[1]);
+  }
 }
 
 function parseForecast(json, fetched) {
@@ -287,9 +352,13 @@ export class TideStore {
     const end = new Date(Date.now() - 2 * DAY_MS);
     const start = new Date(end.getTime() - 365 * DAY_MS);
     const iso = (d) => d.toISOString().slice(0, 10);
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
-      `&hourly=sea_level_height_msl&timeformat=unixtime&cell_selection=sea&start_date=${iso(start)}&end_date=${iso(end)}`;
-    const root = JSON.parse(await get(url, 'Tide service'));
+    const root = await atSea(lat, lng, async (sLat, sLng) => {
+      const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${sLat.toFixed(4)}&longitude=${sLng.toFixed(4)}` +
+        `&hourly=sea_level_height_msl&timeformat=unixtime&cell_selection=sea&start_date=${iso(start)}&end_date=${iso(end)}`;
+      const reply = JSON.parse(await get(url, 'Tide service'));
+      parseHourly(reply);
+      return reply;
+    });
     const [t, h] = parseHourly(root);
     if (t.length < 24 * 60) throw new Error('Not enough tide history here to save tides offline.');
     return { harmonics: TideHarmonics.fit(t, h), root };
@@ -343,10 +412,15 @@ export class TideStore {
 
   /** Downloads a fresh forecast for lat/lng and keeps it under [key]. */
   async refresh(key, lat, lng) {
-    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}` +
-      '&hourly=sea_level_height_msl&timeformat=unixtime&past_days=1&forecast_days=16&cell_selection=sea';
-    const root = JSON.parse(await get(url, 'Tide service'));
+    const root = await atSea(lat, lng, async (sLat, sLng) => {
+      const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${sLat.toFixed(4)}&longitude=${sLng.toFixed(4)}` +
+        '&hourly=sea_level_height_msl&timeformat=unixtime&past_days=1&forecast_days=16&cell_selection=sea';
+      const reply = JSON.parse(await get(url, 'Tide service'));
+      parseHourly(reply);
+      return reply;
+    });
     const now = Date.now();
+    // Kept against where the user is (not the sea point), so moving on re-checks from there.
     root[REQUEST_LAT] = lat;
     root[REQUEST_LNG] = lng;
     root.seabathy_fetched = now;
